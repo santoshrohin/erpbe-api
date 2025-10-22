@@ -22,11 +22,11 @@ namespace ErpBE.Tests.Integration
                 
                 Factory = factory.WithWebHostBuilder(builder =>
                 {
-                    builder.UseEnvironment("Test");
-                    
                     builder.ConfigureAppConfiguration((context, config) =>
                     {
-                        config.AddJsonFile("appsettings.Test.json", optional: false);
+                        // Clear existing configuration and use test configuration
+                        config.Sources.Clear();
+                        config.AddJsonFile("appsettings.Test.json", optional: false, reloadOnChange: false);
                     });
                     
                     builder.ConfigureServices(services =>
