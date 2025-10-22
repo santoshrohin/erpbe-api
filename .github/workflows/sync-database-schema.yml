@@ -1,0 +1,53 @@
+name: Sync Database Schema
+
+on:
+  schedule:
+    # Run daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  sync-schema:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '9.0.x'
+        
+    - name: Setup SQL Server
+      uses: azure/setup-sqlserver@v1
+      with:
+        connection-string: ${{ secrets.TEST_DATABASE_CONNECTION_STRING }}
+        
+    - name: Sync Production Schema
+      run: |
+        # Install SQL Server tools
+        wget -qO- https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -
+        sudo add-apt-repository "$(wget -qO- https://packages.microsoft.com/config/ubuntu/20.04/mssql-server-2022.list)"
+        sudo apt-get update
+        sudo apt-get install -y mssql-tools18
+        
+        # Run schema sync
+        ./scripts/sync-production-schema.ps1
+        
+    - name: Update Database Project
+      run: |
+        ./scripts/update-database-project.ps1
+        
+    - name: Run Tests
+      run: |
+        dotnet test ErpBE.Tests --logger "console;verbosity=normal"
+        
+    - name: Commit Changes
+      if: success()
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add ErpBE.Database/
+        git diff --staged --quiet || git commit -m "Auto-sync database schema from production"
+        git push

@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ERP Logs Viewer - Test Mode</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: #2c3e50;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        .test-mode {
+            background: #fff3cd;
+            color: #856404;
+            padding: 15px;
+            text-align: center;
+            border-bottom: 1px solid #ffeaa7;
+        }
+        .filters {
+            padding: 20px;
+            background: #ecf0f1;
+            border-bottom: 1px solid #bdc3c7;
+        }
+        .filter-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            min-width: 150px;
+        }
+        .filter-group label {
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #2c3e50;
+        }
+        .filter-group input, .filter-group select {
+            padding: 8px;
+            border: 1px solid #bdc3c7;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+        .btn:hover {
+            background: #2980b9;
+        }
+        .btn-danger {
+            background: #e74c3c;
+        }
+        .btn-danger:hover {
+            background: #c0392b;
+        }
+        .btn-success {
+            background: #27ae60;
+        }
+        .btn-success:hover {
+            background: #229954;
+        }
+        .logs-container {
+            padding: 20px;
+        }
+        .log-entry {
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            padding: 15px;
+            background: white;
+        }
+        .log-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .log-level {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .log-level.error { background: #f8d7da; color: #721c24; }
+        .log-level.warning { background: #fff3cd; color: #856404; }
+        .log-level.information { background: #d1ecf1; color: #0c5460; }
+        .log-level.debug { background: #d4edda; color: #155724; }
+        .log-timestamp {
+            color: #6c757d;
+            font-size: 12px;
+        }
+        .log-message {
+            margin: 10px 0;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+        }
+        .log-details {
+            font-size: 12px;
+            color: #6c757d;
+            margin-top: 10px;
+        }
+        .test-data {
+            background: #e8f5e8;
+            border: 1px solid #c3e6c3;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .instructions {
+            background: #f8f9fa;
+            border-left: 4px solid #007bff;
+            padding: 15px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 ERP Logs Viewer - Test Mode</h1>
+            <p>Test the logs viewer interface with sample data</p>
+        </div>
+
+        <div class="test-mode">
+            ⚠️ <strong>Test Mode:</strong> This page shows sample data. To use with real API, run the API server and access <code>/logs</code>
+        </div>
+
+        <div class="instructions">
+            <h3>📋 How to Use This Test Page:</h3>
+            <ol>
+                <li><strong>Test Interface:</strong> Use the filters and buttons to test the UI</li>
+                <li><strong>Real API:</strong> Start your API with <code>dotnet run --project ErpBE.API</code></li>
+                <li><strong>Access Real Logs:</strong> Go to <code>http://localhost:5000/logs</code></li>
+                <li><strong>Authentication:</strong> You'll need to login first to get a JWT token</li>
+            </ol>
+        </div>
+
+        <div class="filters">
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label>Log Level</label>
+                    <select id="levelFilter">
+                        <option value="">All Levels</option>
+                        <option value="Error">Error</option>
+                        <option value="Warning">Warning</option>
+                        <option value="Information">Information</option>
+                        <option value="Debug">Debug</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Search Term</label>
+                    <input type="text" id="searchTerm" placeholder="Search in messages...">
+                </div>
+                <div class="filter-group">
+                    <label>Start Date</label>
+                    <input type="date" id="startDate">
+                </div>
+                <div class="filter-group">
+                    <label>End Date</label>
+                    <input type="date" id="endDate">
+                </div>
+                <div class="filter-group">
+                    <label>Page Size</label>
+                    <select id="pageSize">
+                        <option value="25">25</option>
+                        <option value="50" selected>50</option>
+                        <option value="100">100</option>
+                    </select>
+                </div>
+            </div>
+            <div class="filter-row">
+                <button class="btn" onclick="loadSampleLogs()">🔍 Load Sample Logs</button>
+                <button class="btn btn-success" onclick="startAPI()">🚀 Start API Server</button>
+                <button class="btn" onclick="openRealLogs()">📊 Open Real Logs</button>
+            </div>
+        </div>
+
+        <div class="logs-container">
+            <div id="logsContainer">
+                <div class="test-data">
+                    <h3>📝 Sample Log Data</h3>
+                    <p>Click "Load Sample Logs" to see how the interface works with sample data.</p>
+                    <p>To use with real data, start your API server and access the real logs viewer.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Set default dates
+        document.getElementById('startDate').value = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+        document.getElementById('endDate').value = new Date().toISOString().split('T')[0];
+
+        // Sample log data for testing
+        const sampleLogs = [
+            {
+                id: 1,
+                timeStamp: new Date().toISOString(),
+                level: 'Information',
+                message: 'User ERPADMIN logged in successfully',
+                exception: null,
+                userId: 'ERPADMIN',
+                requestId: 'req-001',
+                actionName: 'Login'
+            },
+            {
+                id: 2,
+                timeStamp: new Date(Date.now() - 1000 * 60 * 5).toISOString(),
+                level: 'Warning',
+                message: 'Failed login attempt for user: testuser',
+                exception: null,
+                userId: 'testuser',
+                requestId: 'req-002',
+                actionName: 'Login'
+            },
+            {
+                id: 3,
+                timeStamp: new Date(Date.now() - 1000 * 60 * 10).toISOString(),
+                level: 'Error',
+                message: 'Database connection timeout',
+                exception: 'System.TimeoutException: Connection timeout after 30 seconds',
+                userId: 'SYSTEM',
+                requestId: 'req-003',
+                actionName: 'DatabaseQuery'
+            },
+            {
+                id: 4,
+                timeStamp: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
+                level: 'Information',
+                message: 'Farmer created successfully: John Doe',
+                exception: null,
+                userId: 'ERPADMIN',
+                requestId: 'req-004',
+                actionName: 'CreateFarmer'
+            },
+            {
+                id: 5,
+                timeStamp: new Date(Date.now() - 1000 * 60 * 20).toISOString(),
+                level: 'Debug',
+                message: 'Processing request: GET /api/Branch',
+                exception: null,
+                userId: 'SALESMGR',
+                requestId: 'req-005',
+                actionName: 'GetBranches'
+            }
+        ];
+
+        function loadSampleLogs() {
+            const container = document.getElementById('logsContainer');
+            
+            const logsHtml = sampleLogs.map(log => `
+                <div class="log-entry">
+                    <div class="log-header">
+                        <span class="log-level ${log.level.toLowerCase()}">${log.level}</span>
+                        <span class="log-timestamp">${new Date(log.timeStamp).toLocaleString()}</span>
+                    </div>
+                    <div class="log-message">${escapeHtml(log.message || '')}</div>
+                    ${log.exception ? `<div class="log-details"><strong>Exception:</strong><br>${escapeHtml(log.exception)}</div>` : ''}
+                    <div class="log-details">
+                        ${log.userId ? `<strong>User:</strong> ${escapeHtml(log.userId)} | ` : ''}
+                        ${log.requestId ? `<strong>Request:</strong> ${escapeHtml(log.requestId)} | ` : ''}
+                        ${log.actionName ? `<strong>Action:</strong> ${escapeHtml(log.actionName)}` : ''}
+                    </div>
+                </div>
+            `).join('');
+
+            container.innerHTML = `
+                <div class="test-data">
+                    <h3>📊 Sample Logs Loaded (${sampleLogs.length} entries)</h3>
+                    <p>This is how your logs will look when connected to the real API.</p>
+                </div>
+                ${logsHtml}
+            `;
+        }
+
+        function startAPI() {
+            alert('To start the API server:\n\n1. Open terminal/command prompt\n2. Navigate to your project directory\n3. Run: dotnet run --project ErpBE.API\n4. Then visit: http://localhost:5000/logs');
+        }
+
+        function openRealLogs() {
+            window.open('http://localhost:5000/logs', '_blank');
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Load sample logs on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadSampleLogs();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Token Generator - ERP Logs</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: #2c3e50;
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .content {
+            padding: 30px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ecf0f1;
+            border-radius: 5px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        .form-group input:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+        .btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.3s;
+            margin-right: 10px;
+        }
+        .btn:hover {
+            background: #2980b9;
+        }
+        .btn-success {
+            background: #27ae60;
+        }
+        .btn-success:hover {
+            background: #229954;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            border-left: 4px solid #3498db;
+        }
+        .token-url {
+            background: #e8f5e8;
+            border: 1px solid #c3e6c3;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 15px 0;
+            word-break: break-all;
+            font-family: monospace;
+        }
+        .copy-btn {
+            background: #17a2b8;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 3px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+        .copy-btn:hover {
+            background: #138496;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔑 Token Generator</h1>
+            <p>Generate JWT token and get direct access URL for logs viewer</p>
+        </div>
+
+        <div class="content">
+            <form id="tokenForm">
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" value="ERPADMIN" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" value="abcd@1234" required>
+                </div>
+                <div class="form-group">
+                    <label for="companyId">Company ID</label>
+                    <input type="number" id="companyId" value="1" required>
+                </div>
+                <div class="form-group">
+                    <label for="financialYearCode">Financial Year Code</label>
+                    <input type="number" id="financialYearCode" value="-2147483641" required>
+                </div>
+                <button type="submit" class="btn">🔑 Generate Token & URL</button>
+                <button type="button" class="btn btn-success" onclick="openLogs()">📊 Open Logs Viewer</button>
+            </form>
+
+            <div id="result" class="result" style="display: none;">
+                <h3>✅ Token Generated Successfully!</h3>
+                <p><strong>Your direct access URL:</strong></p>
+                <div class="token-url" id="tokenUrl">
+                    <!-- Token URL will be inserted here -->
+                </div>
+                <button class="copy-btn" onclick="copyUrl()">📋 Copy URL</button>
+                <button class="btn btn-success" onclick="openTokenUrl()">🚀 Open Logs with Token</button>
+            </div>
+
+            <div id="error" class="error" style="display: none;">
+                <!-- Error messages will be shown here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentToken = '';
+        let currentUrl = '';
+
+        document.getElementById('tokenForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const errorDiv = document.getElementById('error');
+            const resultDiv = document.getElementById('result');
+            
+            // Hide previous messages
+            errorDiv.style.display = 'none';
+            resultDiv.style.display = 'none';
+            
+            try {
+                const response = await fetch('/api/Login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        username: document.getElementById('username').value,
+                        password: document.getElementById('password').value,
+                        companyId: parseInt(document.getElementById('companyId').value),
+                        financialYearCode: parseInt(document.getElementById('financialYearCode').value)
+                    })
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                currentToken = data.token;
+                currentUrl = `${window.location.origin}/logs.html?token=${currentToken}`;
+                
+                // Show result
+                document.getElementById('tokenUrl').textContent = currentUrl;
+                resultDiv.style.display = 'block';
+                
+                // Store token for later use
+                localStorage.setItem('token', currentToken);
+                
+            } catch (error) {
+                errorDiv.textContent = 'Error: ' + error.message;
+                errorDiv.style.display = 'block';
+            }
+        });
+
+        function copyUrl() {
+            navigator.clipboard.writeText(currentUrl).then(() => {
+                alert('URL copied to clipboard!');
+            }).catch(() => {
+                // Fallback for older browsers
+                const textArea = document.createElement('textarea');
+                textArea.value = currentUrl;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                alert('URL copied to clipboard!');
+            });
+        }
+
+        function openTokenUrl() {
+            window.open(currentUrl, '_blank');
+        }
+
+        function openLogs() {
+            const token = localStorage.getItem('token');
+            if (token) {
+                window.open(`${window.location.origin}/logs.html?token=${token}`, '_blank');
+            } else {
+                alert('No token found. Please generate a token first.');
+            }
+        }
+    </script>
+</body>
+</html>

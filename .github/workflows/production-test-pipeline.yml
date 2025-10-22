@@ -1,0 +1,87 @@
+name: Production Test Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '9.0.x'
+        
+    - name: Cache NuGet packages
+      uses: actions/cache@v4
+      with:
+        path: ~/.nuget/packages
+        key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+        restore-keys: |
+          ${{ runner.os }}-nuget-
+          
+    - name: Restore dependencies
+      run: dotnet restore
+      
+    - name: Build solution
+      run: dotnet build --no-restore --configuration Release
+      
+    - name: Run tests against production database
+      run: dotnet test --no-build --configuration Release --logger "console;verbosity=normal"
+      env:
+        ConnectionStrings__DefaultConnection: ${{ secrets.PRODUCTION_CONNECTION_STRING }}
+        
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-results
+        path: '**/TestResults/**/*.trx'
+        
+    - name: Comment PR with test results
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          const path = require('path');
+          
+          // Find test result files
+          const testResultsPath = 'TestResults';
+          if (fs.existsSync(testResultsPath)) {
+            const files = fs.readdirSync(testResultsPath, { recursive: true });
+            const trxFiles = files.filter(file => file.endsWith('.trx'));
+            
+            if (trxFiles.length > 0) {
+              const trxFile = path.join(testResultsPath, trxFiles[0]);
+              const content = fs.readFileSync(trxFile, 'utf8');
+              
+              // Parse basic test results (simplified)
+              const totalTests = (content.match(/<Counters total="(\d+)"/) || [0, '0'])[1];
+              const passedTests = (content.match(/<Counters passed="(\d+)"/) || [0, '0'])[1];
+              const failedTests = (content.match(/<Counters failed="(\d+)"/) || [0, '0'])[1];
+              
+              const comment = `## 🧪 Test Results
+              
+              **Total Tests:** ${totalTests}
+              **Passed:** ${passedTests} ✅
+              **Failed:** ${failedTests} ${failedTests > 0 ? '❌' : '✅'}
+              
+              ${failedTests > 0 ? '⚠️ Some tests failed. Please check the logs for details.' : '🎉 All tests passed!'}`;
+              
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: comment
+              });
+            }
+          }

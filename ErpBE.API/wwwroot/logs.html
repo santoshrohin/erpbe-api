@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ERP Logs Viewer</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: #2c3e50;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        .filters {
+            padding: 20px;
+            background: #ecf0f1;
+            border-bottom: 1px solid #bdc3c7;
+        }
+        .filter-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            min-width: 150px;
+        }
+        .filter-group label {
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #2c3e50;
+        }
+        .filter-group input, .filter-group select {
+            padding: 8px;
+            border: 1px solid #bdc3c7;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+        .btn:hover {
+            background: #2980b9;
+        }
+        .btn-danger {
+            background: #e74c3c;
+        }
+        .btn-danger:hover {
+            background: #c0392b;
+        }
+        .stats {
+            display: flex;
+            gap: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .stat-card {
+            background: white;
+            padding: 15px;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            text-align: center;
+            min-width: 120px;
+        }
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        .stat-label {
+            font-size: 12px;
+            color: #7f8c8d;
+            text-transform: uppercase;
+        }
+        .logs-container {
+            padding: 20px;
+        }
+        .log-entry {
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            padding: 15px;
+            background: white;
+        }
+        .log-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .log-level {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .log-level.error { background: #f8d7da; color: #721c24; }
+        .log-level.warning { background: #fff3cd; color: #856404; }
+        .log-level.information { background: #d1ecf1; color: #0c5460; }
+        .log-level.debug { background: #d4edda; color: #155724; }
+        .log-level.unknown { background: #e2e3e5; color: #495057; }
+        .log-timestamp {
+            color: #6c757d;
+            font-size: 12px;
+        }
+        .log-message {
+            margin: 10px 0;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+        }
+        .log-details {
+            font-size: 12px;
+            color: #6c757d;
+            margin-top: 10px;
+        }
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .pagination button {
+            padding: 8px 12px;
+            border: 1px solid #dee2e6;
+            background: white;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        .pagination button:hover:not(:disabled) {
+            background: #e9ecef;
+        }
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 ERP Logs Viewer</h1>
+            <p>Monitor and analyze application logs</p>
+        </div>
+
+        <div class="filters">
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label>Log Level</label>
+                    <select id="levelFilter">
+                        <option value="">All Levels</option>
+                        <option value="Error">Error</option>
+                        <option value="Warning">Warning</option>
+                        <option value="Information">Information</option>
+                        <option value="Debug">Debug</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Search Term</label>
+                    <input type="text" id="searchTerm" placeholder="Search in messages...">
+                </div>
+                <div class="filter-group">
+                    <label>Start Date</label>
+                    <input type="date" id="startDate">
+                </div>
+                <div class="filter-group">
+                    <label>End Date</label>
+                    <input type="date" id="endDate">
+                </div>
+                <div class="filter-group">
+                    <label>Page Size</label>
+                    <select id="pageSize">
+                        <option value="25">25</option>
+                        <option value="50" selected>50</option>
+                        <option value="100">100</option>
+                    </select>
+                </div>
+            </div>
+            <div class="filter-row">
+                <button class="btn" onclick="loadLogs()">🔍 Search Logs</button>
+                <button class="btn" onclick="loadStatistics()">📊 Statistics</button>
+                <button class="btn btn-danger" onclick="cleanupLogs()">🗑️ Cleanup Old Logs</button>
+            </div>
+        </div>
+
+        <div class="stats" id="statsContainer" style="display: none;">
+            <!-- Statistics will be loaded here -->
+        </div>
+
+        <div class="logs-container">
+            <div id="loadingIndicator" class="loading" style="display: none;">
+                Loading logs...
+            </div>
+            <div id="errorContainer"></div>
+            <div id="logsContainer">
+                <!-- Logs will be loaded here -->
+            </div>
+            <div class="pagination" id="paginationContainer">
+                <!-- Pagination will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentPage = 1;
+        let totalPages = 1;
+
+        // Set default dates
+        document.getElementById('startDate').value = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+        document.getElementById('endDate').value = new Date().toISOString().split('T')[0];
+
+        async function loadLogs(page = 1) {
+            currentPage = page;
+            showLoading(true);
+            hideError();
+
+            try {
+                const params = new URLSearchParams({
+                    pageNumber: page,
+                    pageSize: document.getElementById('pageSize').value,
+                    level: document.getElementById('levelFilter').value,
+                    searchTerm: document.getElementById('searchTerm').value,
+                    startDate: document.getElementById('startDate').value,
+                    endDate: document.getElementById('endDate').value
+                });
+
+                const response = await fetch(`/api/Logs?${params}`, {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    }
+                });
+
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        throw new Error('Authentication failed. Please login again.');
+                    } else if (response.status === 403) {
+                        throw new Error('Access denied. Admin role required to view logs.');
+                    } else {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                }
+
+                const data = await response.json();
+                
+                // Validate response data
+                if (!data || typeof data !== 'object') {
+                    throw new Error('Invalid response format from server');
+                }
+                
+                displayLogs(data);
+                updatePagination(data);
+            } catch (error) {
+                console.error('Error loading logs:', error);
+                showError('Failed to load logs: ' + error.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function loadStatistics() {
+            try {
+                const response = await fetch('/api/Logs/statistics', {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                displayStatistics(data);
+            } catch (error) {
+                showError('Failed to load statistics: ' + error.message);
+            }
+        }
+
+        async function cleanupLogs() {
+            if (!confirm('Are you sure you want to delete old logs? This action cannot be undone.')) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/Logs/cleanup?daysToKeep=30', {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                alert(`Cleanup completed: ${data.message}`);
+                loadLogs(currentPage); // Refresh current page
+            } catch (error) {
+                showError('Failed to cleanup logs: ' + error.message);
+            }
+        }
+
+        function displayLogs(data) {
+            const container = document.getElementById('logsContainer');
+            
+            if (!data.data || data.data.length === 0) {
+                container.innerHTML = '<div class="loading">No logs found matching your criteria.</div>';
+                return;
+            }
+
+            const logsHtml = data.data.map(log => {
+                const level = log.level || 'Unknown';
+                const levelClass = level.toLowerCase();
+                const timestamp = log.timeStamp ? new Date(log.timeStamp).toLocaleString() : 'Unknown';
+                
+                return `
+                <div class="log-entry">
+                    <div class="log-header">
+                        <span class="log-level ${levelClass}">${level}</span>
+                        <span class="log-timestamp">${timestamp}</span>
+                    </div>
+                    <div class="log-message">${escapeHtml(log.message || '')}</div>
+                    ${log.exception ? `<div class="log-details"><strong>Exception:</strong><br>${escapeHtml(log.exception)}</div>` : ''}
+                    <div class="log-details">
+                        ${log.userId ? `<strong>User:</strong> ${escapeHtml(log.userId)} | ` : ''}
+                        ${log.requestId ? `<strong>Request:</strong> ${escapeHtml(log.requestId)} | ` : ''}
+                        ${log.actionName ? `<strong>Action:</strong> ${escapeHtml(log.actionName)}` : ''}
+                    </div>
+                </div>
+            `;
+            }).join('');
+
+            container.innerHTML = logsHtml;
+        }
+
+        function displayStatistics(data) {
+            const container = document.getElementById('statsContainer');
+            const levelStats = data.levelStatistics || [];
+            const dailyStats = data.dailyStatistics || [];
+
+            const totalLogs = levelStats.reduce((sum, stat) => sum + stat.count, 0);
+            const errors = levelStats.find(s => s.level === 'Error')?.count || 0;
+            const warnings = levelStats.find(s => s.level === 'Warning')?.count || 0;
+
+            container.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-number">${totalLogs}</div>
+                    <div class="stat-label">Total Logs (7 days)</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" style="color: #e74c3c;">${errors}</div>
+                    <div class="stat-label">Errors</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" style="color: #f39c12;">${warnings}</div>
+                    <div class="stat-label">Warnings</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${dailyStats.length}</div>
+                    <div class="stat-label">Active Days</div>
+                </div>
+            `;
+            container.style.display = 'flex';
+        }
+
+        function updatePagination(data) {
+            const container = document.getElementById('paginationContainer');
+            totalPages = data.totalPages || 1;
+
+            const paginationHtml = `
+                <button onclick="loadLogs(1)" ${currentPage === 1 ? 'disabled' : ''}>First</button>
+                <button onclick="loadLogs(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>Previous</button>
+                <span>Page ${currentPage} of ${totalPages} (${data.totalCount} total)</span>
+                <button onclick="loadLogs(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>Next</button>
+                <button onclick="loadLogs(${totalPages})" ${currentPage === totalPages ? 'disabled' : ''}>Last</button>
+            `;
+
+            container.innerHTML = paginationHtml;
+        }
+
+        function showLoading(show) {
+            document.getElementById('loadingIndicator').style.display = show ? 'block' : 'none';
+        }
+
+        function showError(message) {
+            const container = document.getElementById('errorContainer');
+            container.innerHTML = `<div class="error">${escapeHtml(message)}</div>`;
+        }
+
+        function hideError() {
+            document.getElementById('errorContainer').innerHTML = '';
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Check for token in URL
+        function getTokenFromUrl() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get('token');
+        }
+
+        // Load logs on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check if token is provided in URL
+            const urlToken = getTokenFromUrl();
+            if (urlToken) {
+                localStorage.setItem('token', urlToken);
+                console.log('Token loaded from URL');
+            }
+            
+            // Check if we have a token
+            const token = localStorage.getItem('token');
+            if (!token) {
+                showError('No authentication token found. Please login first or add ?token=YOUR_TOKEN to the URL');
+                return;
+            }
+            
+            loadLogs();
+        });
+    </script>
+</body>
+</html>

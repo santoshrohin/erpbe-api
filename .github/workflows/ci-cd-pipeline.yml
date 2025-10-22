@@ -1,0 +1,152 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  DOTNET_VERSION: '9.0.x'
+  SQL_SERVER_CONNECTION_STRING: ${{ secrets.TEST_DATABASE_CONNECTION_STRING }}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: Y
+          SA_PASSWORD: TestPassword123!
+          MSSQL_PID: Express
+        ports:
+          - 1433:1433
+        options: >-
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P TestPassword123! -C -Q 'SELECT 1'"
+          --health-interval 30s
+          --health-timeout 10s
+          --health-retries 5
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        
+    - name: Cache NuGet packages
+      uses: actions/cache@v4
+      with:
+        path: ~/.nuget/packages
+        key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+        restore-keys: |
+          ${{ runner.os }}-nuget-
+          
+    - name: Restore dependencies
+      run: dotnet restore
+      
+    - name: Build solution
+      run: dotnet build --no-restore --configuration Release
+      
+    - name: Wait for SQL Server
+      run: |
+        echo "Waiting for SQL Server to be ready..."
+        for i in {1..30}; do
+          if /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "TestPassword123!" -C -Q "SELECT 1" > /dev/null 2>&1; then
+            echo "SQL Server is ready!"
+            break
+          fi
+          echo "Waiting... ($i/30)"
+          sleep 10
+        done
+        
+    - name: Initialize Test Database
+      run: |
+        # Create test database
+        /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "TestPassword123!" -C -Q "CREATE DATABASE ErpBE_Test;"
+        
+        # Run initialization scripts
+        /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "TestPassword123!" -C -i test-scripts/01-init-database.sql
+        /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "TestPassword123!" -C -i test-scripts/02-create-procedures.sql
+        /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "TestPassword123!" -C -i test-scripts/03-seed-test-data.sql
+        
+    - name: Run tests
+      run: dotnet test --no-build --configuration Release --logger "trx;LogFileName=test-results.trx" --collect:"XPlat Code Coverage"
+      env:
+        ConnectionStrings__DefaultConnection: "Server=localhost,1433;Database=ErpBE_Test;User Id=sa;Password=TestPassword123!;TrustServerCertificate=true;"
+        
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-results
+        path: '**/test-results.trx'
+        
+    - name: Upload coverage reports
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: coverage-reports
+        path: '**/coverage.cobertura.xml'
+
+  deploy-staging:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/develop'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        
+    - name: Deploy to Staging
+      run: |
+        echo "Deploying to staging environment..."
+        # Add your staging deployment commands here
+        # Example: Deploy to Azure, AWS, or your staging server
+        
+    - name: Run Integration Tests
+      run: |
+        echo "Running integration tests against staging..."
+        # Add integration test commands here
+
+  deploy-production:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    environment: production
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        
+    - name: Deploy Database Changes
+      run: |
+        echo "Deploying database changes to production..."
+        # Add your production database deployment commands here
+        # Example: Run SQL scripts against production database
+        
+    - name: Deploy Application
+      run: |
+        echo "Deploying application to production..."
+        # Add your production deployment commands here
+        # Example: Deploy to Azure App Service, AWS, or your production server
+        
+    - name: Verify Deployment
+      run: |
+        echo "Verifying production deployment..."
+        # Add verification commands here
+        # Example: Health checks, smoke tests, etc.

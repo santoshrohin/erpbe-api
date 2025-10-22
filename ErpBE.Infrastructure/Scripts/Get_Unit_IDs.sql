@@ -1,0 +1,6 @@
+USE [db_a2ea4b_sunv2]
+GO
+
+-- Get actual unit IDs and names
+SELECT TOP 5 I_UOM_CODE, I_UOM_NAME, I_UOM_DESC FROM ITEM_UNIT_MASTER ORDER BY I_UOM_CODE;
+GO

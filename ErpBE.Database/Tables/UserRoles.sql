@@ -1,0 +1,13 @@
+CREATE TABLE [dbo].[UserRoles] (
+    [UserId] INT NOT NULL,
+    [RoleId] INT NOT NULL,
+    [IsActive] BIT NOT NULL DEFAULT 1,
+    [AssignedDate] DATETIME2 NOT NULL DEFAULT GETDATE(),
+    CONSTRAINT [PK_UserRoles] PRIMARY KEY CLUSTERED ([UserId] ASC, [RoleId] ASC),
+    CONSTRAINT [FK_UserRoles_USER_MASTER] FOREIGN KEY ([UserId]) REFERENCES [dbo].[USER_MASTER] ([UM_CODE]) ON DELETE CASCADE,
+    CONSTRAINT [FK_UserRoles_ROLES] FOREIGN KEY ([RoleId]) REFERENCES [dbo].[ROLES] ([RoleId]) ON DELETE CASCADE
+);
+
+-- Create indexes
+CREATE NONCLUSTERED INDEX [IX_UserRoles_UserId] ON [dbo].[UserRoles] ([UserId] ASC);
+CREATE NONCLUSTERED INDEX [IX_UserRoles_RoleId] ON [dbo].[UserRoles] ([RoleId] ASC);
