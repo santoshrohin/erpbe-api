@@ -1,6 +1,6 @@
 using MediatR;
-using ErpBE.Domain.DTOs;
-using ErpBE.Domain.CommonDto;
+using ErpBE.Application.DTOs;
+using ErpBE.Application.Common.Models;
 
 namespace ErpBE.Application.UnitMaster.Queries
 {

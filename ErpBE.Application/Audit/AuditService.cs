@@ -1,5 +1,5 @@
-using ErpBE.Domain.Interfaces;
-using ErpBE.Domain.DTOs;
+
+using ErpBE.Application.DTOs;
 using System.Data;
 using System.Data.SqlClient;
 using Dapper;

@@ -1,4 +1,4 @@
-﻿using ErpBE.Domain.CommonDto;
+using ErpBE.Application.Common.Models;
 using MediatR;
 
 namespace ErpBE.Application.Common

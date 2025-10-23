@@ -1,5 +1,5 @@
-using ErpBE.Domain.DTOs;
-using ErpBE.Domain.CommonDto;
+using ErpBE.Application.DTOs;
+using ErpBE.Application.Common.Models;
 using MediatR;
 
 namespace ErpBE.Application.UserManagement.Queries

@@ -1,5 +1,5 @@
 using FluentValidation;
-using ErpBE.Domain.Interfaces;
+using ErpBE.Application.Interfaces;
 using ErpBE.Application.UnitMaster.Queries;
 using ErpBE.Application.Common.Validators;
 
@@ -21,4 +21,3 @@ namespace ErpBE.Application.UnitMaster.Validators
         }
     }
 }
-

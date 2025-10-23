@@ -1,6 +1,6 @@
-﻿using Dapper;
-using ErpBE.Domain.Common;
-using ErpBE.Domain.CommonDto;
+using Dapper;
+using ErpBE.Application.Interfaces;
+using ErpBE.Application.Common.Models;
 using System.Data;
 
 namespace ErpBE.Infrastructure.Common

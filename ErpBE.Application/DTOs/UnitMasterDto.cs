@@ -1,6 +1,6 @@
-using ErpBE.Domain.CommonDto;
+using ErpBE.Application.Common.Models;
 
-namespace ErpBE.Domain.DTOs
+namespace ErpBE.Application.DTOs
 {
     public class UnitMasterDto
     {

@@ -1,4 +1,4 @@
-﻿using ErpBE.Domain.Common;
+using ErpBE.Application.Interfaces;
 
 namespace ErpBE.Application.Auth.Queries.Login
 {

@@ -1,4 +1,4 @@
-namespace ErpBE.Domain.Interfaces
+namespace ErpBE.Application.Interfaces
 {
     public interface ILogsRepository
     {

@@ -1,8 +1,8 @@
+using ErpBE.Application.DTOs;
+using ErpBE.Application.Common.Models;
 using ErpBE.Domain.Audit;
-using ErpBE.Domain.CommonDto;
-using ErpBE.Domain.DTOs;
 
-namespace ErpBE.Domain.Interfaces
+namespace ErpBE.Application.Interfaces
 {
     public interface IAuditRepository
     {

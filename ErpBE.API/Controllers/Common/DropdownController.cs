@@ -1,5 +1,5 @@
-﻿using ErpBE.Application.Common;
-using ErpBE.Domain.CommonDto;
+using ErpBE.Application.Common;
+using ErpBE.Application.Common.Models;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 

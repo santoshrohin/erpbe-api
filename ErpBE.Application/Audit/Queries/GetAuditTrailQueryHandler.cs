@@ -1,6 +1,6 @@
 using ErpBE.Application.Audit.Queries;
-using ErpBE.Domain.DTOs;
-using ErpBE.Domain.Interfaces;
+using ErpBE.Application.DTOs;
+
 using MediatR;
 
 namespace ErpBE.Application.Audit.Handlers

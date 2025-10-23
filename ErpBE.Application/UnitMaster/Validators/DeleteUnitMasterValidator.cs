@@ -1,5 +1,5 @@
 using FluentValidation;
-using ErpBE.Domain.Interfaces;
+using ErpBE.Application.Interfaces;
 using ErpBE.Application.UnitMaster.Commands;
 using ErpBE.Application.Common.Validators;
 

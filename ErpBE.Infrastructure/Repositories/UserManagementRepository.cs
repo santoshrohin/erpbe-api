@@ -1,5 +1,5 @@
-using ErpBE.Domain.DTOs;
-using ErpBE.Domain.Interfaces;
+using ErpBE.Application.DTOs;
+using ErpBE.Application.Interfaces;
 using Dapper;
 using System.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
@@ -344,7 +344,7 @@ namespace ErpBE.Infrastructure.Repositories
         }
 
         // Helper method
-        private async Task RemoveAllRolesFromUserAsync(int userId)
+        public async Task RemoveAllRolesFromUserAsync(int userId)
         {
             using var connection = new SqlConnection(_connectionString);
             

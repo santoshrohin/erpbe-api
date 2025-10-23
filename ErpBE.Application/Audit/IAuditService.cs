@@ -1,6 +1,6 @@
-using ErpBE.Domain.DTOs;
+using ErpBE.Application.DTOs;
 
-namespace ErpBE.Domain.Interfaces
+namespace ErpBE.Application.Audit
 {
     public interface IAuditService
     {

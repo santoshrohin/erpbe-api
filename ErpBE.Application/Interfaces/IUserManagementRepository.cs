@@ -1,6 +1,6 @@
-using ErpBE.Domain.DTOs;
+using ErpBE.Application.DTOs;
 
-namespace ErpBE.Domain.Interfaces
+namespace ErpBE.Application.Interfaces
 {
     public interface IUserManagementRepository
     {
@@ -24,15 +24,16 @@ namespace ErpBE.Domain.Interfaces
         Task<List<RoleDto>> GetAllRolesAsync();
         Task<List<RoleDto>> GetActiveRolesAsync();
 
-        // User-Role Assignment
+        // User-Role Management
         Task<bool> AssignRolesToUserAsync(int userId, List<string> roles);
         Task<bool> RemoveRolesFromUserAsync(int userId, List<string> roles);
         Task<List<string>> GetUserRolesAsync(int userId);
         Task<List<UserDto>> GetUsersByRoleAsync(string roleName);
 
-        // Validation
+        // Validation Methods
         Task<bool> UsernameExistsAsync(string username);
         Task<bool> EmailExistsAsync(string email);
         Task<bool> RoleExistsAsync(string roleName);
+        Task RemoveAllRolesFromUserAsync(int userId);
     }
 }

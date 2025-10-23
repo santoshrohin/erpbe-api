@@ -1,7 +1,7 @@
 using ErpBE.Application.UserManagement.Queries;
-using ErpBE.Domain.DTOs;
-using ErpBE.Domain.CommonDto;
-using ErpBE.Domain.Interfaces;
+using ErpBE.Application.DTOs;
+using ErpBE.Application.Common.Models;
+
 using MediatR;
 
 namespace ErpBE.Application.UserManagement.Handlers

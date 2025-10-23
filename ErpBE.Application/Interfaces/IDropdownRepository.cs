@@ -1,9 +1,10 @@
-﻿using ErpBE.Domain.CommonDto;
+using ErpBE.Application.Common.Models;
 
-namespace ErpBE.Domain.Common
+namespace ErpBE.Application.Interfaces
 {
     public interface IDropdownRepository
     {
         Task<List<DropdownItem>> GetDropdownDataAsync(DropdownRequest request);
     }
 }
+

@@ -1,7 +1,7 @@
 using System.Threading.Tasks;
 using ErpBE.Application.UnitMaster.Validators;
-using ErpBE.Domain.DTOs;
-using ErpBE.Domain.Interfaces;
+using ErpBE.Application.DTOs;
+using ErpBE.Application.Interfaces;
 using FluentAssertions;
 using FluentValidation.TestHelper;
 using Moq;

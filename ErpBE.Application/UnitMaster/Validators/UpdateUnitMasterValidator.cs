@@ -1,6 +1,6 @@
 using FluentValidation;
-using ErpBE.Domain.DTOs;
-using ErpBE.Domain.Interfaces;
+using ErpBE.Application.DTOs;
+using ErpBE.Application.Interfaces;
 using ErpBE.Application.Common.Validators;
 
 namespace ErpBE.Application.UnitMaster.Validators

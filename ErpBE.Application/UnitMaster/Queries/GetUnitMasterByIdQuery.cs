@@ -1,5 +1,5 @@
 using MediatR;
-using ErpBE.Domain.DTOs;
+using ErpBE.Application.DTOs;
 
 namespace ErpBE.Application.UnitMaster.Queries
 {

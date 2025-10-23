@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace ErpBE.Domain.DTOs
+namespace ErpBE.Application.DTOs
 {
     public class CreateUserRequest
     {

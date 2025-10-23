@@ -1,9 +1,9 @@
-using ErpBE.Domain.DTOs;
-using ErpBE.Domain.CommonDto;
+using ErpBE.Application.DTOs;
+using ErpBE.Application.Common.Models;
 
-namespace ErpBE.Domain.Interfaces
+namespace ErpBE.Application.UnitMaster
 {
-    public interface IUnitMasterRepository
+    public interface IUnitMasterService
     {
         Task<int> CreateUnitMasterAsync(CreateUnitMasterRequest request);
         Task<bool> UpdateUnitMasterAsync(UpdateUnitMasterRequest request);
@@ -11,7 +11,6 @@ namespace ErpBE.Domain.Interfaces
         Task<UnitMasterDto?> GetUnitMasterByIdAsync(int id);
         Task<UnitMasterDto?> GetUnitMasterByNameAsync(string unitName, int companyId);
         Task<PagedResponse<UnitMasterDto>> GetUnitMastersAsync(UnitMasterQueryParameters queryParameters);
-        Task<bool> IsUnitNameUniqueAsync(string unitName, int companyId, int? excludeId = null);
         Task<bool> SetUnitMasterActiveStatusAsync(int id, bool isActive);
     }
 }

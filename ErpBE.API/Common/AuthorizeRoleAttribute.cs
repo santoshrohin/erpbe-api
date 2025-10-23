@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
+using ErpBE.Application.Interfaces;
 using ErpBE.Domain.Common;
 
 namespace ErpBE.API.Common

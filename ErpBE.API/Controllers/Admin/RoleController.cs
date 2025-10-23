@@ -3,7 +3,7 @@ using MediatR;
 using ErpBE.API.Common;
 using ErpBE.Application.UserManagement.Commands;
 using ErpBE.Application.UserManagement.Queries;
-using ErpBE.Domain.DTOs;
+using ErpBE.Application.DTOs;
 
 namespace ErpBE.API.Controllers.Admin
 {

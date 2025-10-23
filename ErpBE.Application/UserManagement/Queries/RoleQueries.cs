@@ -1,4 +1,4 @@
-using ErpBE.Domain.DTOs;
+using ErpBE.Application.DTOs;
 using MediatR;
 
 namespace ErpBE.Application.UserManagement.Queries

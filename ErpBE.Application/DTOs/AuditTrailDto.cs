@@ -1,4 +1,4 @@
-namespace ErpBE.Domain.DTOs
+namespace ErpBE.Application.DTOs
 {
     public class AuditTrailDto
     {

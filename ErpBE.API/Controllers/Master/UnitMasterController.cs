@@ -1,8 +1,8 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using ErpBE.API.Common;
-using ErpBE.Domain.DTOs;
-using ErpBE.Domain.CommonDto;
+using ErpBE.Application.DTOs;
+using ErpBE.Application.Common.Models;
 using ErpBE.Application.UnitMaster.Commands;
 using ErpBE.Application.UnitMaster.Queries;
 

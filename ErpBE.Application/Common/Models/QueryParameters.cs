@@ -1,4 +1,4 @@
-namespace ErpBE.Domain.CommonDto
+namespace ErpBE.Application.Common.Models
 {
     public class QueryParameters
     {

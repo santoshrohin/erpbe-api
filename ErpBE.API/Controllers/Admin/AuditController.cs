@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using MediatR;
 using ErpBE.API.Common;
 using ErpBE.Application.Audit.Queries;
-using ErpBE.Domain.DTOs;
+using ErpBE.Application.DTOs;
 
 namespace ErpBE.API.Controllers.Admin
 {

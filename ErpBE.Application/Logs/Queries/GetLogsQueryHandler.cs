@@ -1,5 +1,5 @@
 using ErpBE.Application.Logs.DTOs;
-using ErpBE.Domain.Interfaces;
+using ErpBE.Application.Interfaces;
 using MediatR;
 
 namespace ErpBE.Application.Logs.Queries
@@ -53,4 +53,3 @@ namespace ErpBE.Application.Logs.Queries
         }
     }
 }
-

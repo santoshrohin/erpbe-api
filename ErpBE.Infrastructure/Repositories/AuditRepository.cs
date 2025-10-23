@@ -1,8 +1,8 @@
 using Dapper;
 using ErpBE.Domain.Audit;
-using ErpBE.Domain.CommonDto;
-using ErpBE.Domain.DTOs;
-using ErpBE.Domain.Interfaces;
+using ErpBE.Application.Common.Models;
+using ErpBE.Application.DTOs;
+using ErpBE.Application.Interfaces;
 using System.Data;
 
 namespace ErpBE.Infrastructure.Repositories

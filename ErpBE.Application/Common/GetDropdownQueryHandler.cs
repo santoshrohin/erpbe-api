@@ -1,5 +1,5 @@
-﻿using ErpBE.Domain.Common;
-using ErpBE.Domain.CommonDto;
+using ErpBE.Application.Interfaces;
+using ErpBE.Application.Common.Models;
 using MediatR;
 
 namespace ErpBE.Application.Common

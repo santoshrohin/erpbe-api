@@ -1,5 +1,5 @@
 using FluentValidation;
-using ErpBE.Domain.DTOs;
+using ErpBE.Application.DTOs;
 using ErpBE.Application.Common.Validators;
 
 namespace ErpBE.Application.UnitMaster.Validators

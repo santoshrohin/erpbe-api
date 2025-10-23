@@ -1,7 +1,7 @@
-using Dapper;
-using ErpBE.Domain.DTOs;
-using ErpBE.Domain.Interfaces;
-using ErpBE.Domain.CommonDto;
+﻿using Dapper;
+using ErpBE.Application.DTOs;
+using ErpBE.Application.Interfaces;
+using ErpBE.Application.Common.Models;
 using System.Data;
 using System.Data.SqlClient;
 

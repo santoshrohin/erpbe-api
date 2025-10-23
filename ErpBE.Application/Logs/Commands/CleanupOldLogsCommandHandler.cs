@@ -1,4 +1,4 @@
-using ErpBE.Domain.Interfaces;
+using ErpBE.Application.Interfaces;
 using MediatR;
 
 namespace ErpBE.Application.Logs.Commands
@@ -18,4 +18,3 @@ namespace ErpBE.Application.Logs.Commands
         }
     }
 }
-
