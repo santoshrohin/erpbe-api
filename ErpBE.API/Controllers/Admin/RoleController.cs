@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
-using ErpBE.Domain.DTOs;
-using ErpBE.Domain.Interfaces;
+using MediatR;
 using ErpBE.API.Common;
+using ErpBE.Application.UserManagement.Commands;
+using ErpBE.Application.UserManagement.Queries;
+using ErpBE.Domain.DTOs;
 
 namespace ErpBE.API.Controllers.Admin
 {
@@ -10,29 +12,26 @@ namespace ErpBE.API.Controllers.Admin
     [AuthorizeAdmin] // Only Admin can manage roles
     public class RoleController : ControllerBase
     {
-        private readonly IUserManagementService _userService;
+        private readonly IMediator _mediator;
         private readonly ILogger<RoleController> _logger;
 
-        public RoleController(IUserManagementService userService, ILogger<RoleController> logger)
+        public RoleController(IMediator mediator, ILogger<RoleController> logger)
         {
-            _userService = userService;
+            _mediator = mediator;
             _logger = logger;
         }
 
         /// <summary>
         /// Create a new role
         /// </summary>
-        /// <param name="request">Role creation details</param>
-        /// <returns>Created role information</returns>
         [HttpPost]
         [ProducesResponseType(typeof(RoleDto), StatusCodes.Status201Created)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> CreateRole([FromBody] CreateRoleRequest request)
         {
             try
             {
-                var role = await _userService.CreateRoleAsync(request);
+                var command = new CreateRoleCommand { Request = request };
+                var role = await _mediator.Send(command);
                 return CreatedAtAction(nameof(GetRoleById), new { id = role.RoleId }, role);
             }
             catch (InvalidOperationException ex)
@@ -53,18 +52,14 @@ namespace ErpBE.API.Controllers.Admin
         /// <summary>
         /// Update an existing role
         /// </summary>
-        /// <param name="request">Role update details</param>
-        /// <returns>Updated role information</returns>
         [HttpPut]
         [ProducesResponseType(typeof(RoleDto), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> UpdateRole([FromBody] UpdateRoleRequest request)
         {
             try
             {
-                var role = await _userService.UpdateRoleAsync(request);
+                var command = new UpdateRoleCommand { Request = request };
+                var role = await _mediator.Send(command);
                 return Ok(role);
             }
             catch (InvalidOperationException ex)
@@ -81,17 +76,14 @@ namespace ErpBE.API.Controllers.Admin
         /// <summary>
         /// Delete a role
         /// </summary>
-        /// <param name="id">Role ID</param>
-        /// <returns>Success status</returns>
         [HttpDelete("{id}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> DeleteRole(int id)
         {
             try
             {
-                var success = await _userService.DeleteRoleAsync(id);
+                var command = new DeleteRoleCommand { RoleId = id };
+                var success = await _mediator.Send(command);
                 if (success)
                 {
                     return Ok(new { message = "Role deleted successfully" });
@@ -100,7 +92,7 @@ namespace ErpBE.API.Controllers.Admin
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error deleting role: {RoleId}", id);
+                _logger.LogError(ex, "Error deleting role");
                 return StatusCode(500, new { message = "Internal server error" });
             }
         }
@@ -108,17 +100,14 @@ namespace ErpBE.API.Controllers.Admin
         /// <summary>
         /// Get role by ID
         /// </summary>
-        /// <param name="id">Role ID</param>
-        /// <returns>Role information</returns>
         [HttpGet("{id}")]
         [ProducesResponseType(typeof(RoleDto), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetRoleById(int id)
         {
             try
             {
-                var role = await _userService.GetRoleByIdAsync(id);
+                var query = new GetRoleByIdQuery { RoleId = id };
+                var role = await _mediator.Send(query);
                 if (role == null)
                 {
                     return NotFound(new { message = "Role not found" });
@@ -127,7 +116,7 @@ namespace ErpBE.API.Controllers.Admin
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting role by ID: {RoleId}", id);
+                _logger.LogError(ex, "Error getting role");
                 return StatusCode(500, new { message = "Internal server error" });
             }
         }
@@ -135,17 +124,14 @@ namespace ErpBE.API.Controllers.Admin
         /// <summary>
         /// Get role by name
         /// </summary>
-        /// <param name="name">Role name</param>
-        /// <returns>Role information</returns>
         [HttpGet("name/{name}")]
         [ProducesResponseType(typeof(RoleDto), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetRoleByName(string name)
         {
             try
             {
-                var role = await _userService.GetRoleByNameAsync(name);
+                var query = new GetRoleByNameQuery { RoleName = name };
+                var role = await _mediator.Send(query);
                 if (role == null)
                 {
                     return NotFound(new { message = "Role not found" });
@@ -154,7 +140,7 @@ namespace ErpBE.API.Controllers.Admin
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting role by name: {RoleName}", name);
+                _logger.LogError(ex, "Error getting role");
                 return StatusCode(500, new { message = "Internal server error" });
             }
         }
@@ -162,20 +148,19 @@ namespace ErpBE.API.Controllers.Admin
         /// <summary>
         /// Get all roles
         /// </summary>
-        /// <returns>List of all roles</returns>
         [HttpGet]
         [ProducesResponseType(typeof(List<RoleDto>), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetAllRoles()
         {
             try
             {
-                var roles = await _userService.GetAllRolesAsync();
+                var query = new GetAllRolesQuery();
+                var roles = await _mediator.Send(query);
                 return Ok(roles);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting all roles");
+                _logger.LogError(ex, "Error getting roles");
                 return StatusCode(500, new { message = "Internal server error" });
             }
         }
@@ -183,15 +168,14 @@ namespace ErpBE.API.Controllers.Admin
         /// <summary>
         /// Get active roles only
         /// </summary>
-        /// <returns>List of active roles</returns>
         [HttpGet("active")]
         [ProducesResponseType(typeof(List<RoleDto>), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetActiveRoles()
         {
             try
             {
-                var roles = await _userService.GetActiveRolesAsync();
+                var query = new GetActiveRolesQuery();
+                var roles = await _mediator.Send(query);
                 return Ok(roles);
             }
             catch (Exception ex)
@@ -202,23 +186,21 @@ namespace ErpBE.API.Controllers.Admin
         }
 
         /// <summary>
-        /// Check if role exists
+        /// Check if role exists by name
         /// </summary>
-        /// <param name="name">Role name to check</param>
-        /// <returns>Existence status</returns>
         [HttpGet("check-exists/{name}")]
         [ProducesResponseType(typeof(bool), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> CheckRoleExists(string name)
         {
             try
             {
-                var exists = await _userService.RoleExistsAsync(name);
+                var query = new CheckRoleExistsQuery { RoleName = name };
+                var exists = await _mediator.Send(query);
                 return Ok(new { exists });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error checking role existence: {RoleName}", name);
+                _logger.LogError(ex, "Error checking role");
                 return StatusCode(500, new { message = "Internal server error" });
             }
         }
