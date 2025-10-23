@@ -1,6 +1,6 @@
 using ErpBE.Application.DTOs;
 using ErpBE.Application.Common.Models;
-using ErpBE.Domain.Audit;
+using ErpBE.Application.Audit.Models;
 
 namespace ErpBE.Application.Interfaces
 {

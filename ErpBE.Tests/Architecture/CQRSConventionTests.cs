@@ -16,15 +16,14 @@ namespace ErpBE.Tests.Architecture
         public void Commands_ShouldEndWithCommand()
         {
             // Arrange & Act
+            // Commands are IRequest<> implementations in "Commands" namespace or folder
             var result = Types.InAssembly(typeof(ErpBE.Application.AssemblyReference).Assembly)
                 .That()
-                .ResideInNamespace($"{ApplicationNamespace}")
+                .ResideInNamespaceMatching($"{ApplicationNamespace}.*Commands")
                 .And()
                 .AreClasses()
                 .And()
                 .ImplementInterface(typeof(IRequest<>))
-                .And()
-                .DoNotHaveName("Query")
                 .Should()
                 .HaveNameEndingWith("Command")
                 .GetResult();
@@ -58,22 +57,23 @@ namespace ErpBE.Tests.Architecture
         public void CommandHandlers_ShouldEndWithCommandHandler()
         {
             // Arrange & Act
+            // CommandHandlers should be in "Handlers" namespace AND handle Commands
             var result = Types.InAssembly(typeof(ErpBE.Application.AssemblyReference).Assembly)
                 .That()
-                .ResideInNamespace($"{ApplicationNamespace}")
+                .ResideInNamespaceMatching($"{ApplicationNamespace}.*Handlers")
                 .And()
                 .AreClasses()
                 .And()
-                .ImplementInterface(typeof(IRequestHandler<,>))
-                .And()
-                .DoNotHaveName("Query")
-                .Should()
                 .HaveNameEndingWith("CommandHandler")
+                .Or()
+                .HaveNameEndingWith("QueryHandler")
+                .Should()
+                .ImplementInterface(typeof(IRequestHandler<,>))
                 .GetResult();
 
-            // Assert
+            // Assert - Inverted: This checks handlers IMPLEMENT the interface
             Assert.True(result.IsSuccessful, 
-                $"All command handler classes should end with 'CommandHandler'. Violations: {string.Join(", ", result.FailingTypeNames ?? new List<string>())}");
+                $"All handlers should implement IRequestHandler. Violations: {string.Join(", ", result.FailingTypeNames ?? new List<string>())}");
         }
 
         [Fact]

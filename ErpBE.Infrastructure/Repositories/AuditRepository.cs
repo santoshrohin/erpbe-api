@@ -1,5 +1,5 @@
 using Dapper;
-using ErpBE.Domain.Audit;
+using ErpBE.Application.Audit.Models;
 using ErpBE.Application.Common.Models;
 using ErpBE.Application.DTOs;
 using ErpBE.Application.Interfaces;

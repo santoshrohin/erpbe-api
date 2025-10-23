@@ -1,4 +1,5 @@
 using FluentValidation;
+using MediatR;
 using NetArchTest.Rules;
 using Xunit;
 
@@ -148,14 +149,19 @@ namespace ErpBE.Tests.Architecture
         public void ValidationBehavior_ShouldExistInPipeline()
         {
             // Arrange & Act
+            // ValidationBehavior is a generic class, so we need to check for it differently
             var validationBehavior = Types.InAssembly(typeof(ErpBE.Application.AssemblyReference).Assembly)
                 .That()
-                .HaveName("ValidationBehavior")
-                .GetTypes();
+                .ImplementInterface(typeof(IPipelineBehavior<,>))
+                .And()
+                .ResideInNamespace("ErpBE.Application.Common.Behaviors")
+                .GetTypes()
+                .Where(t => t.Name.Contains("ValidationBehavior"))
+                .ToList();
 
             // Assert
             Assert.Single(validationBehavior);
-            Assert.Contains("ValidationBehavior", validationBehavior.Select(t => t.Name));
+            Assert.True(validationBehavior.First().IsGenericType, "ValidationBehavior should be a generic type");
         }
 
         [Fact]
