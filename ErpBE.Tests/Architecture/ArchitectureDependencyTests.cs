@@ -208,6 +208,27 @@ namespace ErpBE.Tests.Architecture
             Assert.True(result.IsSuccessful, 
                 $"Infrastructure implementations should be in the correct namespace. Violations: {string.Join(", ", result.FailingTypeNames ?? new List<string>())}");
         }
+
+        [Fact]
+        public void API_Controllers_ShouldNotDirectlyUseDomain()
+        {
+            // Arrange & Act
+            var apiAssembly = System.Reflection.Assembly.Load("ErpBE.API");
+            
+            // Controllers should not have direct dependency on Domain
+            var result = Types.InAssembly(apiAssembly)
+                .That()
+                .ResideInNamespace($"{ApiNamespace}.Controllers")
+                .ShouldNot()
+                .HaveDependencyOn(DomainNamespace)
+                .GetResult();
+
+            // Assert
+            Assert.True(result.IsSuccessful, 
+                $"API Controllers should NOT use Domain namespace directly (use Application layer instead). " +
+                $"This ensures proper separation of concerns. " +
+                $"Violations: {string.Join(", ", result.FailingTypeNames ?? new List<string>())}");
+        }
     }
 }
 
