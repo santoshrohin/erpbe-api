@@ -1,25 +1,25 @@
 Summary
-  Generated on: 23-10-2025 - 18:56:11
-  Coverage date: 23-10-2025 - 16:50:52 - 23-10-2025 - 18:56:02
-  Parser: MultiReport (5x Cobertura)
+  Generated on: 23-10-2025 - 19:12:41
+  Coverage date: 23-10-2025 - 16:50:52 - 23-10-2025 - 19:12:31
+  Parser: MultiReport (6x Cobertura)
   Assemblies: 4
   Classes: 83
   Files: 63
-  Line coverage: 57.7%
-  Covered lines: 1509
-  Uncovered lines: 1106
+  Line coverage: 58.5%
+  Covered lines: 1531
+  Uncovered lines: 1084
   Coverable lines: 2615
-  Total lines: 4965
-  Branch coverage: 60.5% (189 of 312)
-  Covered branches: 189
+  Total lines: 4927
+  Branch coverage: 61.8% (193 of 312)
+  Covered branches: 193
   Total branches: 312
   Method coverage: 62% (267 of 430)
-  Full method coverage: 49% (211 of 430)
+  Full method coverage: 49.5% (213 of 430)
   Covered methods: 267
-  Fully covered methods: 211
+  Fully covered methods: 213
   Total methods: 430
 
-ErpBE.API                                                                54.9%
+ErpBE.API                                                                56.3%
   ErpBE.API.Common.AuditAttribute                                           0%
   ErpBE.API.Common.AuthorizeAdminAttribute                                100%
   ErpBE.API.Common.AuthorizeManagementAttribute                             0%
@@ -29,7 +29,7 @@ ErpBE.API                                                                54.9%
   ErpBE.API.Common.AuthorizeStoreAttribute                                  0%
   ErpBE.API.Common.AuthorizeUtilityAttribute                                0%
   ErpBE.API.Common.NoAuditAttribute                                         0%
-  ErpBE.API.Common.ValidationExceptionHandler                            15.7%
+  ErpBE.API.Common.ValidationExceptionHandler                             100%
   ErpBE.API.Controllers.Admin.AuditController                              40%
   ErpBE.API.Controllers.Admin.LogsController                               79%
   ErpBE.API.Controllers.Admin.RoleController                             58.9%
@@ -43,13 +43,13 @@ ErpBE.API                                                                54.9%
   ErpBE.API.Middleware.RequestResponseLoggingMiddleware                  87.9%
   Program                                                                 100%
 
-ErpBE.Application                                                        55.9%
+ErpBE.Application                                                        56.7%
   ErpBE.Application.Audit.AuditService                                    100%
   ErpBE.Application.Auth.Queries.Login.LoginHandler                       100%
   ErpBE.Application.Auth.Queries.Login.LoginRequest                       100%
   ErpBE.Application.Auth.Queries.Login.LoginRequestValidator              100%
   ErpBE.Application.Auth.Queries.Login.LoginResponse                      100%
-  ErpBE.Application.Common.Behaviors.ValidationBehavior<T1, T2>          76.9%
+  ErpBE.Application.Common.Behaviors.ValidationBehavior<T1, T2>           100%
   ErpBE.Application.Common.GetDropdownQuery                               100%
   ErpBE.Application.Common.GetDropdownQueryHandler                        100%
   ErpBE.Application.Common.LegacyEncryption                               100%

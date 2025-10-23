@@ -262,7 +262,154 @@ namespace ErpBE.Tests.UnitMaster
 
             // Assert
             response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        }
 
+        [Fact]
+        public async Task GetUnitMasterById_WithInvalidId_ShouldReturnBadRequest()
+        {
+            // Arrange
+            var token = await GetAuthTokenAsync();
+            Client.DefaultRequestHeaders.Authorization = 
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            // Act - Try to get non-existent unit
+            var response = await Client.GetAsync("/api/UnitMaster/999999");
+
+            // Assert
+            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        }
+
+        [Fact]
+        public async Task DeleteUnitMaster_WithNonExistentId_ShouldReturnBadRequest()
+        {
+            // Arrange
+            var token = await GetAuthTokenAsync();
+            Client.DefaultRequestHeaders.Authorization = 
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            // Act
+            var response = await Client.DeleteAsync("/api/UnitMaster/999999");
+
+            // Assert
+            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        }
+
+        [Fact]
+        public async Task GetUnitMasters_WithFiltering_ShouldReturnFilteredResults()
+        {
+            // Arrange
+            var token = await GetAuthTokenAsync();
+            Client.DefaultRequestHeaders.Authorization = 
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            // Act - Get only active units
+            var response = await Client.GetAsync("/api/UnitMaster?CompanyId=1&IsActive=true&PageNumber=1&PageSize=10");
+
+            // Assert
+            response.StatusCode.Should().Be(HttpStatusCode.OK);
+            var responseContent = await response.Content.ReadAsStringAsync();
+            var result = JsonSerializer.Deserialize<JsonElement>(responseContent);
+            result.GetProperty("data").ValueKind.Should().Be(JsonValueKind.Array);
+        }
+
+        [Fact]
+        public async Task GetUnitMasters_WithSearchTerm_ShouldReturnFilteredResults()
+        {
+            // Arrange
+            var token = await GetAuthTokenAsync();
+            Client.DefaultRequestHeaders.Authorization = 
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            // Act - Search for units
+            var response = await Client.GetAsync("/api/UnitMaster?CompanyId=1&SearchTerm=KG&PageNumber=1&PageSize=10");
+
+            // Assert
+            response.StatusCode.Should().Be(HttpStatusCode.OK);
+            var responseContent = await response.Content.ReadAsStringAsync();
+            var result = JsonSerializer.Deserialize<JsonElement>(responseContent);
+            result.GetProperty("data").ValueKind.Should().Be(JsonValueKind.Array);
+        }
+
+        [Fact]
+        public async Task GetUnitMasters_WithSorting_ShouldReturnSortedResults()
+        {
+            // Arrange
+            var token = await GetAuthTokenAsync();
+            Client.DefaultRequestHeaders.Authorization = 
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            // Act - Sort by name descending
+            var response = await Client.GetAsync("/api/UnitMaster?CompanyId=1&SortBy=UnitName&SortDirection=desc&PageNumber=1&PageSize=10");
+
+            // Assert
+            response.StatusCode.Should().Be(HttpStatusCode.OK);
+            var responseContent = await response.Content.ReadAsStringAsync();
+            var result = JsonSerializer.Deserialize<JsonElement>(responseContent);
+            result.GetProperty("data").ValueKind.Should().Be(JsonValueKind.Array);
+        }
+
+        [Fact]
+        public async Task SetUnitMasterActiveStatus_ToggleStatus_ShouldReturnNoContent()
+        {
+            // Arrange
+            var token = await GetAuthTokenAsync();
+            Client.DefaultRequestHeaders.Authorization = 
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            // Create a unit
+            var createRequest = new CreateUnitMasterRequest
+            {
+                UnitName = "TOGGLE" + Guid.NewGuid().ToString().Substring(0, 4),
+                UnitDescription = "Toggle test",
+                CompanyId = 1,
+                IsActive = true
+            };
+            var createJson = JsonSerializer.Serialize(createRequest);
+            var createContent = new StringContent(createJson, Encoding.UTF8, "application/json");
+            var createResponse = await Client.PostAsync("/api/UnitMaster", createContent);
+            createResponse.EnsureSuccessStatusCode();
+            var unitId = int.Parse(await createResponse.Content.ReadAsStringAsync());
+
+            // Act - Toggle to inactive
+            var response1 = await Client.PatchAsync($"/api/UnitMaster/{unitId}/status?isActive=false", null);
+            response1.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+            // Toggle back to active
+            var response2 = await Client.PatchAsync($"/api/UnitMaster/{unitId}/status?isActive=true", null);
+            response2.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+            // Cleanup
+            await Client.DeleteAsync($"/api/UnitMaster/{unitId}");
+        }
+
+        [Fact]
+        public async Task CreateUnitMaster_WithMinimalData_ShouldReturnCreated()
+        {
+            // Arrange
+            var token = await GetAuthTokenAsync();
+            Client.DefaultRequestHeaders.Authorization = 
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            var request = new CreateUnitMasterRequest
+            {
+                UnitName = "MIN" + Guid.NewGuid().ToString().Substring(0, 5),
+                UnitDescription = "", // Empty description is valid
+                CompanyId = 1,
+                IsActive = true
+            };
+
+            var json = JsonSerializer.Serialize(request);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            // Act
+            var response = await Client.PostAsync("/api/UnitMaster", content);
+
+            // Assert
+            response.StatusCode.Should().Be(HttpStatusCode.Created);
+            
+            // Cleanup
+            var unitId = int.Parse(await response.Content.ReadAsStringAsync());
+            await Client.DeleteAsync($"/api/UnitMaster/{unitId}");
         }
     }
 }

@@ -124,43 +124,5 @@ namespace ErpBE.API.Controllers.Master
             await _mediator.Send(command);
             return NoContent();
         }
-
-        /// <summary>
-        /// Debug endpoint to test stored procedure directly.
-        /// </summary>
-        [HttpGet("debug")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<IActionResult> DebugUnitMasters()
-        {
-            try
-            {
-                var queryParameters = new UnitMasterQueryParameters
-                {
-                    PageNumber = 1,
-                    PageSize = 10,
-                    CompanyId = 1,
-                    IsActive = true
-                };
-
-                var query = new GetUnitMastersQuery { QueryParameters = queryParameters };
-                var units = await _mediator.Send(query);
-                
-                return Ok(new { 
-                    message = "Debug successful", 
-                    totalCount = units.TotalCount,
-                    dataCount = units.Data.Count,
-                    data = units.Data,
-                    queryParameters = queryParameters
-                });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { 
-                    message = "Debug failed", 
-                    error = ex.Message, 
-                    stackTrace = ex.StackTrace 
-                });
-            }
-        }
     }
 }
