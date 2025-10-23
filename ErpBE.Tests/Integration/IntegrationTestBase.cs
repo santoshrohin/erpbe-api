@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Hosting;
+using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Xunit;
@@ -24,9 +25,11 @@ namespace ErpBE.Tests.Integration
                 {
                     builder.ConfigureAppConfiguration((context, config) =>
                     {
-                        // Clear existing configuration and use test configuration
-                        config.Sources.Clear();
-                        config.AddJsonFile("appsettings.Test.json", optional: false, reloadOnChange: false);
+                        // Override connection string to use container database
+                        config.AddInMemoryCollection(new Dictionary<string, string>
+                        {
+                            ["ConnectionStrings:DefaultConnection"] = "Server=localhost,1434;Database=ErpBE_Test;User Id=sa;Password=TestPassword123!;TrustServerCertificate=true;"
+                        }!);
                     });
                     
                     builder.ConfigureServices(services =>
