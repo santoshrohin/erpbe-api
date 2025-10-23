@@ -35,6 +35,16 @@ namespace ErpBE.Application.Common.Validators
         }
 
         /// <summary>
+        /// Validates that a numeric value is not zero (can be positive or negative)
+        /// </summary>
+        public static IRuleBuilderOptions<T, int> NotZero<T>(this IRuleBuilder<T, int> ruleBuilder, string fieldName = "Field")
+        {
+            return ruleBuilder
+                .NotEqual(0)
+                .WithMessage($"{fieldName} cannot be 0");
+        }
+
+        /// <summary>
         /// Validates that a numeric value is greater than zero
         /// </summary>
         public static IRuleBuilderOptions<T, int> GreaterThanZero<T>(this IRuleBuilder<T, int> ruleBuilder, string fieldName = "Field")

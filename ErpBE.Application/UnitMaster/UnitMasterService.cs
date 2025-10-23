@@ -20,12 +20,7 @@ namespace ErpBE.Application.UnitMaster
 
         public async Task<int> CreateUnitMasterAsync(CreateUnitMasterRequest request)
         {
-            // Check if unit name is unique
-            if (!await _unitMasterRepository.IsUnitNameUniqueAsync(request.UnitName, request.CompanyId))
-            {
-                throw new InvalidOperationException($"Unit with name '{request.UnitName}' already exists for this company.");
-            }
-
+            // Validation is handled by FluentValidation in the pipeline
             var unitId = await _unitMasterRepository.CreateUnitMasterAsync(request);
             
             // Log audit trail
@@ -36,22 +31,13 @@ namespace ErpBE.Application.UnitMaster
 
         public async Task<bool> UpdateUnitMasterAsync(UpdateUnitMasterRequest request)
         {
-            // Get existing unit to check company ID
+            // Validation is handled by FluentValidation in the pipeline
+            // Get existing unit for audit trail
             var existingUnit = await _unitMasterRepository.GetUnitMasterByIdAsync(request.Id);
-            if (existingUnit == null)
-            {
-                throw new KeyNotFoundException($"Unit with ID '{request.Id}' not found.");
-            }
-
-            // Check if unit name is unique (excluding current record)
-            if (!await _unitMasterRepository.IsUnitNameUniqueAsync(request.UnitName, existingUnit.CompanyId, request.Id))
-            {
-                throw new InvalidOperationException($"Unit with name '{request.UnitName}' already exists for this company.");
-            }
 
             var updated = await _unitMasterRepository.UpdateUnitMasterAsync(request);
             
-            if (updated)
+            if (updated && existingUnit != null)
             {
                 // Log audit trail
                 await _auditService.LogUpdateAsync("ITEM_UNIT_MASTER", request.Id, existingUnit, request, "System");
@@ -62,16 +48,13 @@ namespace ErpBE.Application.UnitMaster
 
         public async Task<bool> DeleteUnitMasterAsync(int id)
         {
+            // Validation is handled by FluentValidation in the pipeline
             // Get existing unit for audit trail
             var existingUnit = await _unitMasterRepository.GetUnitMasterByIdAsync(id);
-            if (existingUnit == null)
-            {
-                throw new KeyNotFoundException($"Unit with ID '{id}' not found.");
-            }
 
             var deleted = await _unitMasterRepository.DeleteUnitMasterAsync(id);
             
-            if (deleted)
+            if (deleted && existingUnit != null)
             {
                 // Log audit trail
                 await _auditService.LogDeleteAsync("ITEM_UNIT_MASTER", id, existingUnit, "System");

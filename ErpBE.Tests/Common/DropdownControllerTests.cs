@@ -3,14 +3,18 @@ using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
-using ErpBE.Tests;
+using ErpBE.Tests.Integration;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Xunit;
 
 namespace ErpBE.Tests.Common
 {
-    public class DropdownControllerTests : TestBase
+    /// <summary>
+    /// Integration tests for Dropdown API
+    /// Dropdown endpoints don't require authentication
+    /// </summary>
+    public class DropdownControllerTests : IntegrationTestBase
     {
         public DropdownControllerTests(WebApplicationFactory<Program> factory) : base(factory)
         {

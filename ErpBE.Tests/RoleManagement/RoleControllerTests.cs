@@ -1,16 +1,21 @@
+using System;
 using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
-using ErpBE.Tests;
+using ErpBE.Tests.Integration;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Xunit;
 
 namespace ErpBE.Tests.RoleManagement
 {
-    public class RoleControllerTests : TestBase
+    /// <summary>
+    /// Integration tests for Role Management API
+    /// Tests create test data, verify operations, and clean up afterwards
+    /// </summary>
+    public class RoleControllerTests : IntegrationTestBase
     {
         public RoleControllerTests(WebApplicationFactory<Program> factory) : base(factory)
         {
@@ -24,21 +29,39 @@ namespace ErpBE.Tests.RoleManagement
             Client.DefaultRequestHeaders.Authorization = 
                 new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
+            var uniqueId = Guid.NewGuid().ToString("N").Substring(0, 8);
             var request = new
             {
-                RoleName = "TestRole_" + Guid.NewGuid().ToString().Substring(0, 8),
-                Description = "Test Role Description",
+                RoleName = $"TEST_ROLE_{uniqueId}",
+                Description = "Test Role for Integration Testing",
                 IsActive = true
             };
 
             var json = JsonSerializer.Serialize(request);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-            // Act
-            var response = await Client.PostAsync("/api/Role", content);
+            try
+            {
+                // Act
+                var response = await Client.PostAsync("/api/Role", content);
 
-            // Assert
-            response.StatusCode.Should().Be(HttpStatusCode.Created);
+                // Assert
+                response.StatusCode.Should().Be(HttpStatusCode.Created);
+                
+                var responseContent = await response.Content.ReadAsStringAsync();
+                var result = JsonSerializer.Deserialize<JsonElement>(responseContent);
+                
+                // Cleanup
+                if (result.TryGetProperty("roleId", out var roleIdElement))
+                {
+                    var roleId = roleIdElement.GetInt32();
+                    await Client.DeleteAsync($"/api/Role/{roleId}");
+                }
+            }
+            finally
+            {
+                Client.DefaultRequestHeaders.Authorization = null;
+            }
         }
 
         [Fact]
@@ -59,11 +82,18 @@ namespace ErpBE.Tests.RoleManagement
             var json = JsonSerializer.Serialize(request);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-            // Act
-            var response = await Client.PostAsync("/api/Role", content);
+            try
+            {
+                // Act
+                var response = await Client.PostAsync("/api/Role", content);
 
-            // Assert
-            response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+                // Assert
+                response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+            }
+            finally
+            {
+                Client.DefaultRequestHeaders.Authorization = null;
+            }
         }
 
         [Fact]
@@ -84,11 +114,18 @@ namespace ErpBE.Tests.RoleManagement
             var json = JsonSerializer.Serialize(request);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-            // Act
-            var response = await Client.PostAsync("/api/Role", content);
+            try
+            {
+                // Act
+                var response = await Client.PostAsync("/api/Role", content);
 
-            // Assert
-            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+                // Assert
+                response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            }
+            finally
+            {
+                Client.DefaultRequestHeaders.Authorization = null;
+            }
         }
 
         [Fact]
@@ -99,11 +136,23 @@ namespace ErpBE.Tests.RoleManagement
             Client.DefaultRequestHeaders.Authorization = 
                 new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
-            // Act
-            var response = await Client.GetAsync("/api/Role");
+            try
+            {
+                // Act
+                var response = await Client.GetAsync("/api/Role");
 
-            // Assert
-            response.StatusCode.Should().Be(HttpStatusCode.OK);
+                // Assert
+                response.StatusCode.Should().Be(HttpStatusCode.OK);
+                
+                var responseContent = await response.Content.ReadAsStringAsync();
+                var result = JsonSerializer.Deserialize<JsonElement>(responseContent);
+                
+                result.ValueKind.Should().Be(JsonValueKind.Array);
+            }
+            finally
+            {
+                Client.DefaultRequestHeaders.Authorization = null;
+            }
         }
 
         [Fact]
@@ -114,11 +163,41 @@ namespace ErpBE.Tests.RoleManagement
             Client.DefaultRequestHeaders.Authorization = 
                 new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
-            // Act
-            var response = await Client.GetAsync("/api/Role/2"); // SalesManager role ID
+            // First, create a test role
+            var uniqueId = Guid.NewGuid().ToString("N").Substring(0, 8);
+            var createRequest = new
+            {
+                RoleName = $"TEST_GET_ROLE_{uniqueId}",
+                Description = "Test Get Role",
+                IsActive = true
+            };
 
-            // Assert
-            response.StatusCode.Should().Be(HttpStatusCode.OK);
+            var createJson = JsonSerializer.Serialize(createRequest);
+            var createContent = new StringContent(createJson, Encoding.UTF8, "application/json");
+            var createResponse = await Client.PostAsync("/api/Role", createContent);
+            var createResponseContent = await createResponse.Content.ReadAsStringAsync();
+            var createResult = JsonSerializer.Deserialize<JsonElement>(createResponseContent);
+            var roleId = createResult.GetProperty("roleId").GetInt32();
+
+            try
+            {
+                // Act
+                var response = await Client.GetAsync($"/api/Role/{roleId}");
+
+                // Assert
+                response.StatusCode.Should().Be(HttpStatusCode.OK);
+                
+                var responseContent = await response.Content.ReadAsStringAsync();
+                var result = JsonSerializer.Deserialize<JsonElement>(responseContent);
+                
+                result.GetProperty("roleId").GetInt32().Should().Be(roleId);
+            }
+            finally
+            {
+                // Cleanup
+                await Client.DeleteAsync($"/api/Role/{roleId}");
+                Client.DefaultRequestHeaders.Authorization = null;
+            }
         }
 
         [Fact]
@@ -129,22 +208,48 @@ namespace ErpBE.Tests.RoleManagement
             Client.DefaultRequestHeaders.Authorization = 
                 new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
-            var request = new
+            // First, create a test role
+            var uniqueId = Guid.NewGuid().ToString("N").Substring(0, 8);
+            var createRequest = new
             {
-                RoleId = 25, // SalesManager role ID
-                RoleName = "UpdatedRole_" + Guid.NewGuid().ToString().Substring(0, 8),
-                Description = "Updated Role Description",
+                RoleName = $"TEST_UPDATE_ROLE_{uniqueId}",
+                Description = "Test Update Role",
                 IsActive = true
             };
 
-            var json = JsonSerializer.Serialize(request);
-            var content = new StringContent(json, Encoding.UTF8, "application/json");
+            var createJson = JsonSerializer.Serialize(createRequest);
+            var createContent = new StringContent(createJson, Encoding.UTF8, "application/json");
+            var createResponse = await Client.PostAsync("/api/Role", createContent);
+            var createResponseContent = await createResponse.Content.ReadAsStringAsync();
+            var createResult = JsonSerializer.Deserialize<JsonElement>(createResponseContent);
+            var roleId = createResult.GetProperty("roleId").GetInt32();
 
-            // Act
-            var response = await Client.PutAsync("/api/Role", content);
+            try
+            {
+                // Prepare update request
+                var updateRequest = new
+                {
+                    RoleId = roleId,
+                    RoleName = $"TEST_UPDATED_ROLE_{uniqueId}",
+                    Description = "Updated Role Description",
+                    IsActive = true
+                };
 
-            // Assert
-            response.StatusCode.Should().Be(HttpStatusCode.OK);
+                var json = JsonSerializer.Serialize(updateRequest);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                // Act
+                var response = await Client.PutAsync("/api/Role", content);
+
+                // Assert
+                response.StatusCode.Should().Be(HttpStatusCode.OK);
+            }
+            finally
+            {
+                // Cleanup
+                await Client.DeleteAsync($"/api/Role/{roleId}");
+                Client.DefaultRequestHeaders.Authorization = null;
+            }
         }
 
         [Fact]
@@ -156,22 +261,37 @@ namespace ErpBE.Tests.RoleManagement
                 new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
             // First, create a role to delete
+            var uniqueId = Guid.NewGuid().ToString("N").Substring(0, 8);
             var createRequest = new
             {
-                RoleName = "TO_DELETE_ROLE_" + Guid.NewGuid().ToString().Substring(0, 8),
+                RoleName = $"TEST_DELETE_ROLE_{uniqueId}",
                 Description = "Role to be deleted",
                 IsActive = true
             };
+
             var createJsonContent = new StringContent(JsonSerializer.Serialize(createRequest), Encoding.UTF8, "application/json");
             var createResponse = await Client.PostAsync("/api/Role", createJsonContent);
             createResponse.EnsureSuccessStatusCode();
-            var createdRoleId = JsonSerializer.Deserialize<dynamic>(await createResponse.Content.ReadAsStringAsync())!.GetProperty("roleId").GetInt32();
+            var createResponseContent = await createResponse.Content.ReadAsStringAsync();
+            var createResult = JsonSerializer.Deserialize<JsonElement>(createResponseContent);
+            var createdRoleId = createResult.GetProperty("roleId").GetInt32();
 
-            // Act
-            var response = await Client.DeleteAsync($"/api/Role/{createdRoleId}");
+            try
+            {
+                // Act
+                var response = await Client.DeleteAsync($"/api/Role/{createdRoleId}");
 
-            // Assert
-            response.StatusCode.Should().Be(HttpStatusCode.OK);
+                // Assert
+                response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+                // Verify role is deleted
+                var getResponse = await Client.GetAsync($"/api/Role/{createdRoleId}");
+                getResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+            }
+            finally
+            {
+                Client.DefaultRequestHeaders.Authorization = null;
+            }
         }
 
         [Fact]
@@ -203,28 +323,6 @@ namespace ErpBE.Tests.RoleManagement
 
             // Assert
             response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
-        }
-
-        private async Task<string> GetAuthTokenAsync()
-        {
-            var loginRequest = new
-            {
-                Username = "Mohan",
-                Password = "1234",
-                CompanyId = 1,
-                FinancialYearCode = -2147483641
-            };
-
-            var json = JsonSerializer.Serialize(loginRequest);
-            var content = new StringContent(json, Encoding.UTF8, "application/json");
-
-            var response = await Client.PostAsync("/api/Login", content);
-            response.EnsureSuccessStatusCode();
-
-            var responseContent = await response.Content.ReadAsStringAsync();
-            var result = JsonSerializer.Deserialize<JsonElement>(responseContent);
-            
-            return result.GetProperty("token").GetString()!;
         }
     }
 }

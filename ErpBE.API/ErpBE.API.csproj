@@ -30,4 +30,5 @@
     <ProjectReference Include="..\ErpBE.Infrastructure\ErpBE.Infrastructure.csproj" />
   </ItemGroup>
 
+
 </Project>

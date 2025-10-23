@@ -1,17 +1,25 @@
 using FluentValidation;
 using ErpBE.Domain.DTOs;
+using ErpBE.Domain.Interfaces;
 using ErpBE.Application.Common.Validators;
 
 namespace ErpBE.Application.UnitMaster.Validators
 {
     public class CreateUnitMasterValidator : AbstractValidator<CreateUnitMasterRequest>
     {
-        public CreateUnitMasterValidator()
+        private readonly IUnitMasterRepository _repository;
+
+        public CreateUnitMasterValidator(IUnitMasterRepository repository)
         {
+            _repository = repository;
+
             RuleFor(x => x.UnitName)
                 .NotNullOrEmpty("Unit name")
                 .MaxLength(10, "Unit name")
-                .AlphanumericOnly("Unit name");
+                .AlphanumericOnly("Unit name")
+                .MustAsync(async (request, unitName, cancellation) => 
+                    await _repository.IsUnitNameUniqueAsync(unitName, request.CompanyId))
+                .WithMessage(x => $"Unit with name '{x.UnitName}' already exists for this company.");
 
             RuleFor(x => x.UnitDescription)
                 .MaxLength(100, "Unit description")

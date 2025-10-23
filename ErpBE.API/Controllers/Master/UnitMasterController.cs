@@ -28,23 +28,12 @@ namespace ErpBE.API.Controllers.Master
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status409Conflict)]
         public async Task<IActionResult> CreateUnitMaster([FromBody] CreateUnitMasterRequest request)
         {
-            try
-            {
-                var command = new CreateUnitMasterCommand { Request = request };
-                var unitId = await _mediator.Send(command);
-                return CreatedAtAction(nameof(GetUnitMasterById), new { id = unitId }, unitId);
-            }
-            catch (InvalidOperationException ex)
-            {
-                return Conflict(new { message = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = "Error creating unit master", detail = ex.Message });
-            }
+            // Validation is handled by FluentValidation pipeline
+            var command = new CreateUnitMasterCommand { Request = request };
+            var unitId = await _mediator.Send(command);
+            return CreatedAtAction(nameof(GetUnitMasterById), new { id = unitId }, unitId);
         }
 
         /// <summary>
@@ -55,28 +44,12 @@ namespace ErpBE.API.Controllers.Master
         [HttpPut]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status409Conflict)]
         public async Task<IActionResult> UpdateUnitMaster([FromBody] UpdateUnitMasterRequest request)
         {
-            try
-            {
-                var command = new UpdateUnitMasterCommand { Request = request };
-                var updated = await _mediator.Send(command);
-                if (!updated)
-                {
-                    return NotFound(new { message = $"Unit master with ID '{request.Id}' not found." });
-                }
-                return NoContent();
-            }
-            catch (InvalidOperationException ex)
-            {
-                return Conflict(new { message = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = "Error updating unit master", detail = ex.Message });
-            }
+            // Validation is handled by FluentValidation pipeline
+            var command = new UpdateUnitMasterCommand { Request = request };
+            await _mediator.Send(command);
+            return NoContent();
         }
 
         /// <summary>
@@ -86,23 +59,13 @@ namespace ErpBE.API.Controllers.Master
         /// <returns>No content if successful.</returns>
         [HttpDelete("{id}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> DeleteUnitMaster(int id)
         {
-            try
-            {
-                var command = new DeleteUnitMasterCommand { Id = id };
-                var deleted = await _mediator.Send(command);
-                if (!deleted)
-                {
-                    return NotFound(new { message = $"Unit master with ID '{id}' not found." });
-                }
-                return NoContent();
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = "Error deleting unit master", detail = ex.Message });
-            }
+            // Validation is handled by FluentValidation pipeline
+            var command = new DeleteUnitMasterCommand { Id = id };
+            await _mediator.Send(command);
+            return NoContent();
         }
 
         /// <summary>
@@ -112,15 +75,12 @@ namespace ErpBE.API.Controllers.Master
         /// <returns>The unit master details.</returns>
         [HttpGet("{id}")]
         [ProducesResponseType(typeof(UnitMasterDto), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> GetUnitMasterById(int id)
         {
+            // Validation is handled by FluentValidation pipeline
             var query = new GetUnitMasterByIdQuery { Id = id };
             var unit = await _mediator.Send(query);
-            if (unit == null)
-            {
-                return NotFound(new { message = $"Unit master with ID '{id}' not found." });
-            }
             return Ok(unit);
         }
 
@@ -146,39 +106,23 @@ namespace ErpBE.API.Controllers.Master
         /// <returns>No content if successful.</returns>
         [HttpPatch("{id}/status")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> SetUnitMasterActiveStatus(int id, [FromQuery] bool isActive)
         {
-            try
-            {
-                // This would need a separate command/handler for setting active status
-                // For now, we'll use the update endpoint
-                var unit = await _mediator.Send(new GetUnitMasterByIdQuery { Id = id });
-                if (unit == null)
-                {
-                    return NotFound(new { message = $"Unit master with ID '{id}' not found." });
-                }
+            // Validation is handled by FluentValidation pipeline
+            var unit = await _mediator.Send(new GetUnitMasterByIdQuery { Id = id });
 
-                var updateRequest = new UpdateUnitMasterRequest
-                {
-                    Id = id,
-                    UnitName = unit.UnitName,
-                    UnitDescription = unit.UnitDescription,
-                    IsActive = isActive
-                };
-
-                var command = new UpdateUnitMasterCommand { Request = updateRequest };
-                var updated = await _mediator.Send(command);
-                if (!updated)
-                {
-                    return StatusCode(500, new { message = "Failed to update unit master status." });
-                }
-                return NoContent();
-            }
-            catch (Exception ex)
+            var updateRequest = new UpdateUnitMasterRequest
             {
-                return StatusCode(500, new { message = "Error setting unit master active status", detail = ex.Message });
-            }
+                Id = id,
+                UnitName = unit!.UnitName,
+                UnitDescription = unit.UnitDescription,
+                IsActive = isActive
+            };
+
+            var command = new UpdateUnitMasterCommand { Request = updateRequest };
+            await _mediator.Send(command);
+            return NoContent();
         }
 
         /// <summary>

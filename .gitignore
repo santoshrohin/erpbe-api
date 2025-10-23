@@ -28,3 +28,10 @@ secrets.json
 
 # VS Code
 .vscode/
+
+# Code Coverage
+coverage-report/
+TestResults/
+coverage.cobertura.xml
+*.coverage
+*.coveragexml

@@ -40,39 +40,30 @@ namespace ErpBE.Tests.UnitMaster
             };
 
             var expectedUnitId = 123;
-            _mockRepository.Setup(x => x.IsUnitNameUniqueAsync(request.UnitName, request.CompanyId, null))
-                          .ReturnsAsync(true);
+            // Service no longer validates - that's done in FluentValidation
             _mockRepository.Setup(x => x.CreateUnitMasterAsync(request))
                           .ReturnsAsync(expectedUnitId);
+            // Setup audit service (can't use Verify due to optional parameters in interface)
+            _mockAuditService.Setup(x => x.LogCreateAsync(
+                It.IsAny<string>(), 
+                It.IsAny<int>(), 
+                It.IsAny<object>(), 
+                It.IsAny<string>(),
+                null, null, null))
+                            .Returns(Task.CompletedTask);
 
             // Act
             var result = await _service.CreateUnitMasterAsync(request);
 
             // Assert
             result.Should().Be(expectedUnitId);
-            _mockRepository.Verify(x => x.IsUnitNameUniqueAsync(request.UnitName, request.CompanyId, null), Times.Once);
             _mockRepository.Verify(x => x.CreateUnitMasterAsync(request), Times.Once);
+            // Verify audit service was called
+            _mockAuditService.VerifyAll();
         }
 
-        [Fact]
-        public async Task CreateUnitMasterAsync_WithDuplicateName_ShouldThrowException()
-        {
-            // Arrange
-            var request = new CreateUnitMasterRequest
-            {
-                UnitName = "EXISTING_UNIT",
-                UnitDescription = "Test Unit Description",
-                CompanyId = 1,
-                IsActive = true
-            };
-
-            _mockRepository.Setup(x => x.IsUnitNameUniqueAsync(request.UnitName, request.CompanyId, null))
-                          .ReturnsAsync(false);
-
-            // Act & Assert
-            await Assert.ThrowsAsync<InvalidOperationException>(() => _service.CreateUnitMasterAsync(request));
-            _mockRepository.Verify(x => x.CreateUnitMasterAsync(request), Times.Never);
-        }
+        // NOTE: Validation is now handled by FluentValidation in the MediatR pipeline
+        // This test has been removed as the service no longer performs validation
 
         [Fact]
         public async Task GetUnitMasterByIdAsync_WithValidId_ShouldReturnUnit()

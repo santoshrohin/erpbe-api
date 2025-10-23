@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Text;
@@ -19,11 +20,11 @@ namespace ErpBE.Tests.Auth
         [Fact]
         public async Task Login_WithValidCredentials_ShouldReturnToken()
         {
-            // Arrange
+            // Arrange - Use TestUser credentials
             var loginRequest = new
             {
-                Username = "Mohan",
-                Password = "1234",
+                Username = "TestUser",
+                Password = "Test@123",
                 CompanyId = 1,
                 FinancialYearCode = -2147483641
             };
@@ -42,6 +43,11 @@ namespace ErpBE.Tests.Auth
             
             result.TryGetProperty("token", out var token).Should().BeTrue();
             token.GetString().Should().NotBeNullOrEmpty();
+            
+            // Verify TestUser has Admin role
+            result.TryGetProperty("roles", out var roles).Should().BeTrue();
+            var rolesArray = roles.EnumerateArray().Select(r => r.GetString()).ToList();
+            rolesArray.Should().Contain("Admin");
         }
 
         [Fact]
@@ -72,8 +78,8 @@ namespace ErpBE.Tests.Auth
             // Arrange
             var loginRequest = new
             {
-                Username = "Mohan",
-                Password = "1234",
+                Username = "TestUser",
+                Password = "Test@123",
                 CompanyId = 1,
                 FinancialYearCode=(string)null
                 // Missing FinancialYearCode
@@ -96,7 +102,7 @@ namespace ErpBE.Tests.Auth
             var loginRequest = new
             {
                 Username = "",
-                Password = "1234",
+                Password = "Test@123",
                 CompanyId = 1,
                 FinancialYearCode = -2147483641
             };
@@ -117,7 +123,7 @@ namespace ErpBE.Tests.Auth
             // Arrange
             var loginRequest = new
             {
-                Username = "Mohan",
+                Username = "TestUser",
                 Password = "",
                 CompanyId = 1,
                 FinancialYearCode = -2147483641

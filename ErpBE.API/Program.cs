@@ -29,7 +29,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 // ------------------ Serilog Configuration ------------------
 // Configure Serilog - Use SQL Server logging for both development and production
-Log.Logger = new LoggerConfiguration()
+// Skip SQL Server logging in Testing environment to avoid conflicts with test database
+var loggerConfig = new LoggerConfiguration()
     .MinimumLevel.Debug()
     .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
     .MinimumLevel.Override("Microsoft.Hosting.Lifetime", LogEventLevel.Information)
@@ -38,26 +39,29 @@ Log.Logger = new LoggerConfiguration()
     .Enrich.WithMachineName()
     .Enrich.WithProcessId()
     .Enrich.WithThreadId()
-    .WriteTo.Console()
-    .WriteTo.MSSqlServer(
-        connectionString: builder.Configuration.GetConnectionString("DefaultConnection"),
-        sinkOptions: new Serilog.Sinks.MSSqlServer.MSSqlServerSinkOptions
+    .WriteTo.Console();
+
+// Configure SQL Server logging
+loggerConfig.WriteTo.MSSqlServer(
+    connectionString: builder.Configuration.GetConnectionString("DefaultConnection"),
+    sinkOptions: new Serilog.Sinks.MSSqlServer.MSSqlServerSinkOptions
+    {
+        TableName = "Logs",
+        SchemaName = "dbo",
+        AutoCreateSqlTable = true
+    },
+    columnOptions: new Serilog.Sinks.MSSqlServer.ColumnOptions
+    {
+        // Additional custom columns
+        AdditionalColumns = new List<Serilog.Sinks.MSSqlServer.SqlColumn>
         {
-            TableName = "Logs",
-            SchemaName = "dbo",
-            AutoCreateSqlTable = true
-        },
-        columnOptions: new Serilog.Sinks.MSSqlServer.ColumnOptions
-        {
-            // Additional custom columns
-            AdditionalColumns = new List<Serilog.Sinks.MSSqlServer.SqlColumn>
-            {
-                new Serilog.Sinks.MSSqlServer.SqlColumn { ColumnName = "UserId", DataType = System.Data.SqlDbType.NVarChar, DataLength = 50 },
-                new Serilog.Sinks.MSSqlServer.SqlColumn { ColumnName = "RequestId", DataType = System.Data.SqlDbType.NVarChar, DataLength = 50 },
-                new Serilog.Sinks.MSSqlServer.SqlColumn { ColumnName = "ActionName", DataType = System.Data.SqlDbType.NVarChar, DataLength = 100 }
-            }
-        })
-    .CreateLogger();
+            new Serilog.Sinks.MSSqlServer.SqlColumn { ColumnName = "UserId", DataType = System.Data.SqlDbType.NVarChar, DataLength = 50 },
+            new Serilog.Sinks.MSSqlServer.SqlColumn { ColumnName = "RequestId", DataType = System.Data.SqlDbType.NVarChar, DataLength = 50 },
+            new Serilog.Sinks.MSSqlServer.SqlColumn { ColumnName = "ActionName", DataType = System.Data.SqlDbType.NVarChar, DataLength = 100 }
+        }
+    });
+
+Log.Logger = loggerConfig.CreateLogger();
 
 builder.Host.UseSerilog();
 
@@ -134,18 +138,19 @@ builder.Services.AddControllers(options =>
 });
 
 // Dapper-compatible DB Connection
+// Use sp.GetRequiredService<IConfiguration>() instead of builder.Configuration
+// This allows test overrides to work by reading config at runtime, not at registration time
 builder.Services.AddTransient<IDbConnection>(sp =>
-    new SqlConnection(builder.Configuration.GetConnectionString("DefaultConnection")));
+{
+    var configuration = sp.GetRequiredService<IConfiguration>();
+    var connectionString = configuration.GetConnectionString("DefaultConnection");
+    return new SqlConnection(connectionString);
+});
 
 // Application-specific services
 builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
 builder.Services.AddScoped<ILoginRepository, LoginRepository>();
 builder.Services.AddScoped<IDropdownRepository, DropdownRepository>();
-builder.Services.AddScoped<IBranchRepository, BranchRepository>();
-builder.Services.AddScoped<ILineRepository, LineRepository>();
-builder.Services.AddScoped<IFarmerRepository, FarmerRepository>();
-builder.Services.AddScoped<IFarmerItemRepository, FarmerItemRepository>();
-builder.Services.AddScoped<IPlacementRepository, PlacementRepository>();
 
 // Audit services
 builder.Services.AddScoped<IAuditService, AuditService>();
