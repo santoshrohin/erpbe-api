@@ -162,5 +162,50 @@ namespace ErpBE.Tests.Auth
             // Assert
             response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         }
+
+        [Fact]
+        public async Task Login_WithValidUsername_ButInvalidCompanyId_ShouldReturnUnauthorized()
+        {
+            // Arrange - Test with invalid company ID
+            var loginRequest = new
+            {
+                Username = "TestUser",
+                Password = "Test@123",
+                CompanyId = 99999, // Invalid company ID
+                FinancialYearCode = -2147483641
+            };
+
+            var json = JsonSerializer.Serialize(loginRequest);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            // Act
+            var response = await Client.PostAsync("/api/Login", content);
+
+            // Assert
+            // Should return Unauthorized for invalid company
+            response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        }
+
+        [Fact]
+        public async Task Login_WithWhitespaceUsername_ShouldReturnBadRequest()
+        {
+            // Arrange
+            var loginRequest = new
+            {
+                Username = "   ",
+                Password = "Test@123",
+                CompanyId = 1,
+                FinancialYearCode = -2147483641
+            };
+
+            var json = JsonSerializer.Serialize(loginRequest);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            // Act
+            var response = await Client.PostAsync("/api/Login", content);
+
+            // Assert
+            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        }
     }
 }

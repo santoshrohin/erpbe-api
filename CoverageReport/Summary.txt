@@ -1,0 +1,111 @@
+Summary
+  Generated on: 23-10-2025 - 18:56:11
+  Coverage date: 23-10-2025 - 16:50:52 - 23-10-2025 - 18:56:02
+  Parser: MultiReport (5x Cobertura)
+  Assemblies: 4
+  Classes: 83
+  Files: 63
+  Line coverage: 57.7%
+  Covered lines: 1509
+  Uncovered lines: 1106
+  Coverable lines: 2615
+  Total lines: 4965
+  Branch coverage: 60.5% (189 of 312)
+  Covered branches: 189
+  Total branches: 312
+  Method coverage: 62% (267 of 430)
+  Full method coverage: 49% (211 of 430)
+  Covered methods: 267
+  Fully covered methods: 211
+  Total methods: 430
+
+ErpBE.API                                                                54.9%
+  ErpBE.API.Common.AuditAttribute                                           0%
+  ErpBE.API.Common.AuthorizeAdminAttribute                                100%
+  ErpBE.API.Common.AuthorizeManagementAttribute                             0%
+  ErpBE.API.Common.AuthorizePurchaseAttribute                               0%
+  ErpBE.API.Common.AuthorizeReadOnlyAttribute                               0%
+  ErpBE.API.Common.AuthorizeSalesAttribute                                  0%
+  ErpBE.API.Common.AuthorizeStoreAttribute                                  0%
+  ErpBE.API.Common.AuthorizeUtilityAttribute                                0%
+  ErpBE.API.Common.NoAuditAttribute                                         0%
+  ErpBE.API.Common.ValidationExceptionHandler                            15.7%
+  ErpBE.API.Controllers.Admin.AuditController                              40%
+  ErpBE.API.Controllers.Admin.LogsController                               79%
+  ErpBE.API.Controllers.Admin.RoleController                             58.9%
+  ErpBE.API.Controllers.Admin.UserController                             46.7%
+  ErpBE.API.Controllers.Auth.LoginController                               80%
+  ErpBE.API.Controllers.Common.DropdownController                        85.7%
+  ErpBE.API.Controllers.Master.UnitMasterController                      61.7%
+  ErpBE.API.Controllers.Test.AuditTestController                            0%
+  ErpBE.API.Controllers.Test.TestLoggingController                          0%
+  ErpBE.API.Controllers.Test.ValidationTestController                       0%
+  ErpBE.API.Middleware.RequestResponseLoggingMiddleware                  87.9%
+  Program                                                                 100%
+
+ErpBE.Application                                                        55.9%
+  ErpBE.Application.Audit.AuditService                                    100%
+  ErpBE.Application.Auth.Queries.Login.LoginHandler                       100%
+  ErpBE.Application.Auth.Queries.Login.LoginRequest                       100%
+  ErpBE.Application.Auth.Queries.Login.LoginRequestValidator              100%
+  ErpBE.Application.Auth.Queries.Login.LoginResponse                      100%
+  ErpBE.Application.Common.Behaviors.ValidationBehavior<T1, T2>          76.9%
+  ErpBE.Application.Common.GetDropdownQuery                               100%
+  ErpBE.Application.Common.GetDropdownQueryHandler                        100%
+  ErpBE.Application.Common.LegacyEncryption                               100%
+  ErpBE.Application.Common.Validators.CommonValidationRules               5.4%
+  ErpBE.Application.UnitMaster.Commands.CreateUnitMasterCommand           100%
+  ErpBE.Application.UnitMaster.Commands.CreateUnitMasterCommandHandler    100%
+  ErpBE.Application.UnitMaster.Commands.DeleteUnitMasterCommand           100%
+  ErpBE.Application.UnitMaster.Commands.DeleteUnitMasterCommandHandler    100%
+  ErpBE.Application.UnitMaster.Commands.UpdateUnitMasterCommand           100%
+  ErpBE.Application.UnitMaster.Commands.UpdateUnitMasterCommandHandler    100%
+  ErpBE.Application.UnitMaster.Queries.GetUnitMasterByIdQuery             100%
+  ErpBE.Application.UnitMaster.Queries.GetUnitMasterByIdQueryHandler      100%
+  ErpBE.Application.UnitMaster.Queries.GetUnitMastersQuery                100%
+  ErpBE.Application.UnitMaster.Queries.GetUnitMastersQueryHandler         100%
+  ErpBE.Application.UnitMaster.UnitMasterService                         92.6%
+  ErpBE.Application.UnitMaster.Validators.CreateUnitMasterValidator         0%
+  ErpBE.Application.UnitMaster.Validators.DeleteUnitMasterValidator       100%
+  ErpBE.Application.UnitMaster.Validators.GetUnitMasterByIdValidator      100%
+  ErpBE.Application.UnitMaster.Validators.UnitMasterQueryValidator          0%
+  ErpBE.Application.UnitMaster.Validators.UpdateUnitMasterValidator         0%
+  ErpBE.Application.UserManagement.UserManagementService                 49.8%
+
+ErpBE.Domain                                                             52.9%
+  ErpBE.Domain.Audit.AuditConfiguration                                     0%
+  ErpBE.Domain.Audit.AuditEntry                                             0%
+  ErpBE.Domain.Audit.AuditPropertyChange                                    0%
+  ErpBE.Domain.Auth.LoginResult                                           100%
+  ErpBE.Domain.Common.UserRole                                              0%
+  ErpBE.Domain.CommonDto.DropdownItem                                     100%
+  ErpBE.Domain.CommonDto.DropdownRequest                                  100%
+  ErpBE.Domain.CommonDto.PagedResponse<T>                                 100%
+  ErpBE.Domain.CommonDto.QueryParameters                                 35.2%
+  ErpBE.Domain.DTOs.AssignRolesRequest                                    100%
+  ErpBE.Domain.DTOs.AuditConfigurationDto                                   0%
+  ErpBE.Domain.DTOs.AuditEntryDto                                           0%
+  ErpBE.Domain.DTOs.AuditPropertyChangeDto                                  0%
+  ErpBE.Domain.DTOs.AuditQueryParameters                                    0%
+  ErpBE.Domain.DTOs.AuditTrailDto                                         100%
+  ErpBE.Domain.DTOs.ChangePasswordRequest                                 100%
+  ErpBE.Domain.DTOs.CreateRoleRequest                                     100%
+  ErpBE.Domain.DTOs.CreateUnitMasterRequest                               100%
+  ErpBE.Domain.DTOs.CreateUserRequest                                     100%
+  ErpBE.Domain.DTOs.RoleDto                                               100%
+  ErpBE.Domain.DTOs.UnitMasterDto                                         100%
+  ErpBE.Domain.DTOs.UnitMasterQueryParameters                             100%
+  ErpBE.Domain.DTOs.UpdateRoleRequest                                     100%
+  ErpBE.Domain.DTOs.UpdateUnitMasterRequest                               100%
+  ErpBE.Domain.DTOs.UpdateUserRequest                                     100%
+  ErpBE.Domain.DTOs.UserDto                                               100%
+  ErpBE.Domain.Entities.UnitMaster                                          0%
+
+ErpBE.Infrastructure                                                     68.5%
+  ErpBE.Infrastructure.ApplicationDbContext                                 0%
+  ErpBE.Infrastructure.Auth.JwtTokenGenerator                             100%
+  ErpBE.Infrastructure.Auth.LoginRepository                               100%
+  ErpBE.Infrastructure.Common.DropdownRepository                          100%
+  ErpBE.Infrastructure.Repositories.AuditRepository                         0%
+  ErpBE.Infrastructure.Repositories.UnitMasterRepository                 69.4%
+  ErpBE.Infrastructure.Repositories.UserManagementRepository             94.5%
