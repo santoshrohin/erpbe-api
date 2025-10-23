@@ -433,5 +433,81 @@ namespace ErpBE.Tests.RoleManagement
                 Client.DefaultRequestHeaders.Authorization = null;
             }
         }
+
+        [Fact]
+        public async Task CreateRole_WithNullRequest_ShouldReturnBadRequest()
+        {
+            var token = await GetAuthTokenAsync();
+            Client.DefaultRequestHeaders.Authorization = 
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            try
+            {
+                var response = await Client.PostAsync("/api/Role", new StringContent("", Encoding.UTF8, "application/json"));
+                response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            }
+            finally
+            {
+                Client.DefaultRequestHeaders.Authorization = null;
+            }
+        }
+
+        [Fact]
+        public async Task CreateRole_WithInvalidJson_ShouldReturnBadRequest()
+        {
+            var token = await GetAuthTokenAsync();
+            Client.DefaultRequestHeaders.Authorization = 
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            try
+            {
+                var invalidJson = "{ invalid json }";
+                var content = new StringContent(invalidJson, Encoding.UTF8, "application/json");
+                var response = await Client.PostAsync("/api/Role", content);
+                response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            }
+            finally
+            {
+                Client.DefaultRequestHeaders.Authorization = null;
+            }
+        }
+
+        [Fact]
+        public async Task UpdateRole_WithInvalidJson_ShouldReturnBadRequest()
+        {
+            var token = await GetAuthTokenAsync();
+            Client.DefaultRequestHeaders.Authorization = 
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            try
+            {
+                var invalidJson = "{ invalid: test }";
+                var content = new StringContent(invalidJson, Encoding.UTF8, "application/json");
+                var response = await Client.PutAsync("/api/Role", content);
+                response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            }
+            finally
+            {
+                Client.DefaultRequestHeaders.Authorization = null;
+            }
+        }
+
+        [Fact]
+        public async Task GetRoleById_WithNonExistentId_ShouldReturnNotFound()
+        {
+            var token = await GetAuthTokenAsync();
+            Client.DefaultRequestHeaders.Authorization = 
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            try
+            {
+                var response = await Client.GetAsync("/api/Role/999999");
+                response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+            }
+            finally
+            {
+                Client.DefaultRequestHeaders.Authorization = null;
+            }
+        }
     }
 }

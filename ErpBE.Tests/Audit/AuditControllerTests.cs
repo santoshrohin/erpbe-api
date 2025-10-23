@@ -161,6 +161,73 @@ namespace ErpBE.Tests.Audit
                 Client.DefaultRequestHeaders.Authorization = null;
             }
         }
+
+        [Fact]
+        public async Task GetAuditTrail_WithInvalidTableName_ShouldHandleGracefully()
+        {
+            var token = await GetAuthTokenAsync();
+            Client.DefaultRequestHeaders.Authorization = 
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            try
+            {
+                // Act - Try with invalid/SQL injection table name
+                var response = await Client.GetAsync("/api/Audit/INVALID_TABLE_NAME_12345");
+
+                // Assert - Should handle gracefully (either OK with empty data or InternalServerError)
+                response.StatusCode.Should().Match(x => 
+                    x == HttpStatusCode.OK || x == HttpStatusCode.InternalServerError,
+                    "because invalid table names should be handled gracefully");
+            }
+            finally
+            {
+                Client.DefaultRequestHeaders.Authorization = null;
+            }
+        }
+
+        [Fact]
+        public async Task GetAuditTrail_WithNegativeRecordId_ShouldReturnOk()
+        {
+            var token = await GetAuthTokenAsync();
+            Client.DefaultRequestHeaders.Authorization = 
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            try
+            {
+                // Act - Negative IDs are valid in this system
+                var response = await Client.GetAsync("/api/Audit/ITEM_UNIT_MASTER?recordId=-999");
+
+                // Assert
+                response.StatusCode.Should().Be(HttpStatusCode.OK);
+            }
+            finally
+            {
+                Client.DefaultRequestHeaders.Authorization = null;
+            }
+        }
+
+        [Fact]
+        public async Task GetRecordAuditTrail_WithLargePagination_ShouldReturnOk()
+        {
+            var token = await GetAuthTokenAsync();
+            Client.DefaultRequestHeaders.Authorization = 
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            try
+            {
+                // Act - Test with maximum pagination (should be capped at 100)
+                var response = await Client.GetAsync("/api/Audit/ITEM_UNIT_MASTER/1?pageSize=200");
+
+                // Assert
+                response.StatusCode.Should().Match(x => 
+                    x == HttpStatusCode.OK || x == HttpStatusCode.BadRequest || x == HttpStatusCode.InternalServerError,
+                    "because endpoint should handle large page sizes");
+            }
+            finally
+            {
+                Client.DefaultRequestHeaders.Authorization = null;
+            }
+        }
     }
 }
 

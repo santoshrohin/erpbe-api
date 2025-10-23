@@ -728,5 +728,63 @@ namespace ErpBE.Tests.UserManagement
                 Client.DefaultRequestHeaders.Authorization = null;
             }
         }
+
+        [Fact]
+        public async Task CreateUser_WithNullRequest_ShouldReturnBadRequest()
+        {
+            var token = await GetAuthTokenAsync();
+            Client.DefaultRequestHeaders.Authorization = 
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            try
+            {
+                var response = await Client.PostAsync("/api/User", new StringContent("", Encoding.UTF8, "application/json"));
+                response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            }
+            finally
+            {
+                Client.DefaultRequestHeaders.Authorization = null;
+            }
+        }
+
+        [Fact]
+        public async Task CreateUser_WithInvalidJson_ShouldReturnBadRequest()
+        {
+            var token = await GetAuthTokenAsync();
+            Client.DefaultRequestHeaders.Authorization = 
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            try
+            {
+                var invalidJson = "{ invalid json }";
+                var content = new StringContent(invalidJson, Encoding.UTF8, "application/json");
+                var response = await Client.PostAsync("/api/User", content);
+                response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            }
+            finally
+            {
+                Client.DefaultRequestHeaders.Authorization = null;
+            }
+        }
+
+        [Fact]
+        public async Task UpdateUser_WithInvalidJson_ShouldReturnBadRequest()
+        {
+            var token = await GetAuthTokenAsync();
+            Client.DefaultRequestHeaders.Authorization = 
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            try
+            {
+                var invalidJson = "{ invalid: test }";
+                var content = new StringContent(invalidJson, Encoding.UTF8, "application/json");
+                var response = await Client.PutAsync("/api/User", content);
+                response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            }
+            finally
+            {
+                Client.DefaultRequestHeaders.Authorization = null;
+            }
+        }
     }
 }

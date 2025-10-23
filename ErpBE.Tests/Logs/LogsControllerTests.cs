@@ -201,6 +201,116 @@ namespace ErpBE.Tests.Logs
             var response = await Client.GetAsync("/api/Logs/debug");
             response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         }
+
+        [Fact]
+        public async Task GetLogs_WithInvalidPageNumber_ShouldHandleGracefully()
+        {
+            var token = await GetAuthTokenAsync();
+            Client.DefaultRequestHeaders.Authorization = 
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            try
+            {
+                // Act - Negative page number should be handled (converted to 1)
+                var response = await Client.GetAsync("/api/Logs?pageNumber=-1&pageSize=10");
+
+                // Assert - Should handle gracefully (convert to valid page)
+                response.StatusCode.Should().Be(HttpStatusCode.OK);
+            }
+            finally
+            {
+                Client.DefaultRequestHeaders.Authorization = null;
+            }
+        }
+
+        [Fact]
+        public async Task GetLogs_WithZeroPageSize_ShouldHandleGracefully()
+        {
+            var token = await GetAuthTokenAsync();
+            Client.DefaultRequestHeaders.Authorization = 
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            try
+            {
+                // Act - Zero page size should be handled (converted to default 50)
+                var response = await Client.GetAsync("/api/Logs?pageNumber=1&pageSize=0");
+
+                // Assert
+                response.StatusCode.Should().Be(HttpStatusCode.OK);
+            }
+            finally
+            {
+                Client.DefaultRequestHeaders.Authorization = null;
+            }
+        }
+
+        [Fact]
+        public async Task GetLogs_WithExcessivePageSize_ShouldHandleGracefully()
+        {
+            var token = await GetAuthTokenAsync();
+            Client.DefaultRequestHeaders.Authorization = 
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            try
+            {
+                // Act - Page size > 100 should be capped at 100
+                var response = await Client.GetAsync("/api/Logs?pageNumber=1&pageSize=1000");
+
+                // Assert
+                response.StatusCode.Should().Be(HttpStatusCode.OK);
+                var content = await response.Content.ReadAsStringAsync();
+                var result = JsonSerializer.Deserialize<JsonElement>(content);
+                result.GetProperty("pageSize").GetInt32().Should().BeLessOrEqualTo(100);
+            }
+            finally
+            {
+                Client.DefaultRequestHeaders.Authorization = null;
+            }
+        }
+
+        [Fact]
+        public async Task GetLogs_WithInvalidLevel_ShouldReturnOk()
+        {
+            var token = await GetAuthTokenAsync();
+            Client.DefaultRequestHeaders.Authorization = 
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            try
+            {
+                // Act - Invalid level should just return no matches
+                var response = await Client.GetAsync("/api/Logs?level=InvalidLevel");
+
+                // Assert
+                response.StatusCode.Should().Be(HttpStatusCode.OK);
+            }
+            finally
+            {
+                Client.DefaultRequestHeaders.Authorization = null;
+            }
+        }
+
+        [Fact]
+        public async Task GetLogs_WithFutureDateRange_ShouldReturnOk()
+        {
+            var token = await GetAuthTokenAsync();
+            Client.DefaultRequestHeaders.Authorization = 
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            try
+            {
+                var futureDate = DateTime.UtcNow.AddDays(30).ToString("yyyy-MM-dd");
+                
+                // Act
+                var response = await Client.GetAsync($"/api/Logs?startDate={futureDate}");
+
+                // Assert - Should return OK with empty data
+                response.StatusCode.Should().Be(HttpStatusCode.OK);
+            }
+            finally
+            {
+                Client.DefaultRequestHeaders.Authorization = null;
+            }
+        }
     }
 }
 
