@@ -324,5 +324,114 @@ namespace ErpBE.Tests.RoleManagement
             // Assert
             response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         }
+
+        [Fact]
+        public async Task GetRoleByName_WithValidName_ShouldReturnRole()
+        {
+            var token = await GetAuthTokenAsync();
+            Client.DefaultRequestHeaders.Authorization = 
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            var uniqueId = Guid.NewGuid().ToString("N").Substring(0, 8);
+            var roleName = $"RNAME{uniqueId}";
+            int? roleId = null;
+
+            try
+            {
+                var createRequest = new { RoleName = roleName, Description = "Test", IsActive = true };
+                var json = JsonSerializer.Serialize(createRequest);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+                var createResponse = await Client.PostAsync("/api/Role", content);
+                createResponse.EnsureSuccessStatusCode();
+
+                var createContent = await createResponse.Content.ReadAsStringAsync();
+                var createdRole = JsonSerializer.Deserialize<JsonElement>(createContent);
+                roleId = createdRole.GetProperty("roleId").GetInt32();
+
+                var response = await Client.GetAsync($"/api/Role/name/{roleName}");
+                response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+                var responseContent = await response.Content.ReadAsStringAsync();
+                var role = JsonSerializer.Deserialize<JsonElement>(responseContent);
+                role.GetProperty("roleName").GetString().Should().Be(roleName);
+            }
+            finally
+            {
+                if (roleId.HasValue) await Client.DeleteAsync($"/api/Role/{roleId}");
+                Client.DefaultRequestHeaders.Authorization = null;
+            }
+        }
+
+        [Fact]
+        public async Task GetActiveRoles_ShouldReturnOnlyActiveRoles()
+        {
+            var token = await GetAuthTokenAsync();
+            Client.DefaultRequestHeaders.Authorization = 
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            try
+            {
+                var response = await Client.GetAsync("/api/Role/active");
+                response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+                var content = await response.Content.ReadAsStringAsync();
+                var roles = JsonSerializer.Deserialize<JsonElement>(content);
+                roles.ValueKind.Should().Be(JsonValueKind.Array);
+
+                // All roles should be active
+                foreach (var role in roles.EnumerateArray())
+                {
+                    role.GetProperty("isActive").GetBoolean().Should().BeTrue();
+                }
+            }
+            finally
+            {
+                Client.DefaultRequestHeaders.Authorization = null;
+            }
+        }
+
+        [Fact]
+        public async Task CheckRoleExists_WithExistingRole_ShouldReturnTrue()
+        {
+            var token = await GetAuthTokenAsync();
+            Client.DefaultRequestHeaders.Authorization = 
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            try
+            {
+                var response = await Client.GetAsync("/api/Role/check-exists/Admin");
+                response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+                var content = await response.Content.ReadAsStringAsync();
+                var result = JsonSerializer.Deserialize<JsonElement>(content);
+                result.GetProperty("exists").GetBoolean().Should().BeTrue();
+            }
+            finally
+            {
+                Client.DefaultRequestHeaders.Authorization = null;
+            }
+        }
+
+        [Fact]
+        public async Task CheckRoleExists_WithNonExistingRole_ShouldReturnFalse()
+        {
+            var token = await GetAuthTokenAsync();
+            Client.DefaultRequestHeaders.Authorization = 
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            try
+            {
+                var response = await Client.GetAsync($"/api/Role/check-exists/NonExist{Guid.NewGuid()}");
+                response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+                var content = await response.Content.ReadAsStringAsync();
+                var result = JsonSerializer.Deserialize<JsonElement>(content);
+                result.GetProperty("exists").GetBoolean().Should().BeFalse();
+            }
+            finally
+            {
+                Client.DefaultRequestHeaders.Authorization = null;
+            }
+        }
     }
 }
