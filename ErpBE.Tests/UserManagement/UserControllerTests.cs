@@ -294,7 +294,7 @@ namespace ErpBE.Tests.UserManagement
                 var roleContent = new StringContent(roleJson, Encoding.UTF8, "application/json");
 
                 // Act
-                var response = await Client.PostAsync("/api/User/assign-roles", roleContent);
+                var response = await Client.PostAsync($"/api/User/{userId}/roles", roleContent);
 
                 // Assert
                 response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -573,17 +573,21 @@ namespace ErpBE.Tests.UserManagement
                 userId = createdUser.GetProperty("userId").GetInt32();
 
                 // Assign role first
-                var assignRequest = new { UserId = userId.Value, RoleNames = new[] { "Admin" } };
+                var assignRequest = new { UserId = userId.Value, Roles = new[] { "Admin" } };
                 var assignJson = JsonSerializer.Serialize(assignRequest);
                 var assignContent = new StringContent(assignJson, Encoding.UTF8, "application/json");
-                await Client.PostAsync("/api/User/assign-roles", assignContent);
+                await Client.PostAsync($"/api/User/{userId.Value}/roles", assignContent);
 
                 // Remove role
-                var removeRequest = new { RoleNames = new[] { "Admin" } };
-                var removeJson = JsonSerializer.Serialize(removeRequest);
+                var rolesToRemove = new[] { "Admin" };
+                var removeJson = JsonSerializer.Serialize(rolesToRemove);
                 var removeContent = new StringContent(removeJson, Encoding.UTF8, "application/json");
 
-                var response = await Client.PostAsync($"/api/User/{userId}/remove-roles", removeContent);
+                var deleteRequest = new HttpRequestMessage(HttpMethod.Delete, $"/api/User/{userId}/roles")
+                {
+                    Content = removeContent
+                };
+                var response = await Client.SendAsync(deleteRequest);
                 response.StatusCode.Should().Be(HttpStatusCode.OK);
             }
             finally
@@ -602,7 +606,7 @@ namespace ErpBE.Tests.UserManagement
 
             try
             {
-                var response = await Client.GetAsync("/api/User/by-role/Admin");
+                var response = await Client.GetAsync("/api/User/role/Admin");
                 response.StatusCode.Should().Be(HttpStatusCode.OK);
                 
                 var content = await response.Content.ReadAsStringAsync();

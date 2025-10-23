@@ -158,28 +158,7 @@ namespace ErpBE.Tests.Logs
             }
         }
 
-        [Fact]
-        public async Task GetLogDebug_WithValidAuth_ShouldReturnOk()
-        {
-            var token = await GetAuthTokenAsync();
-            Client.DefaultRequestHeaders.Authorization = 
-                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
-
-            try
-            {
-                var response = await Client.GetAsync("/api/Logs/debug");
-                response.StatusCode.Should().Be(HttpStatusCode.OK);
-
-                var content = await response.Content.ReadAsStringAsync();
-                var result = JsonSerializer.Deserialize<JsonElement>(content);
-                result.GetProperty("tableStructure").ValueKind.Should().Be(JsonValueKind.Array);
-                result.GetProperty("sampleData").ValueKind.Should().Be(JsonValueKind.Array);
-            }
-            finally
-            {
-                Client.DefaultRequestHeaders.Authorization = null;
-            }
-        }
+        // Removed GetLogDebug tests - /debug endpoint no longer exists after CQRS refactoring
 
         [Fact]
         public async Task GetLogs_WithoutAuth_ShouldReturnUnauthorized()
@@ -192,13 +171,6 @@ namespace ErpBE.Tests.Logs
         public async Task GetLogStatistics_WithoutAuth_ShouldReturnUnauthorized()
         {
             var response = await Client.GetAsync("/api/Logs/statistics");
-            response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
-        }
-
-        [Fact]
-        public async Task GetLogDebug_WithoutAuth_ShouldReturnUnauthorized()
-        {
-            var response = await Client.GetAsync("/api/Logs/debug");
             response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         }
 
@@ -305,6 +277,97 @@ namespace ErpBE.Tests.Logs
 
                 // Assert - Should return OK with empty data
                 response.StatusCode.Should().Be(HttpStatusCode.OK);
+            }
+            finally
+            {
+                Client.DefaultRequestHeaders.Authorization = null;
+            }
+        }
+
+        [Fact]
+        public async Task CleanupOldLogs_WithValidAuth_ShouldReturnOk()
+        {
+            var token = await GetAuthTokenAsync();
+            Client.DefaultRequestHeaders.Authorization = 
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            try
+            {
+                // Act - Clean up logs older than 365 days (safe value to not delete test data)
+                var response = await Client.DeleteAsync("/api/Logs/cleanup?daysToKeep=365");
+
+                // Assert
+                response.StatusCode.Should().Be(HttpStatusCode.OK);
+                
+                var content = await response.Content.ReadAsStringAsync();
+                var result = JsonSerializer.Deserialize<JsonElement>(content);
+                
+                // Verify response structure
+                result.GetProperty("message").ValueKind.Should().Be(JsonValueKind.String);
+                result.GetProperty("deletedCount").ValueKind.Should().Be(JsonValueKind.Number);
+                
+                var deletedCount = result.GetProperty("deletedCount").GetInt32();
+                deletedCount.Should().BeGreaterThanOrEqualTo(0);
+            }
+            finally
+            {
+                Client.DefaultRequestHeaders.Authorization = null;
+            }
+        }
+
+        [Fact]
+        public async Task CleanupOldLogs_WithoutAuth_ShouldReturnUnauthorized()
+        {
+            // Act
+            var response = await Client.DeleteAsync("/api/Logs/cleanup?daysToKeep=30");
+
+            // Assert
+            response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        }
+
+        [Fact]
+        public async Task CleanupOldLogs_WithCustomDaysToKeep_ShouldReturnOk()
+        {
+            var token = await GetAuthTokenAsync();
+            Client.DefaultRequestHeaders.Authorization = 
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            try
+            {
+                // Act - Test with different daysToKeep value
+                var response = await Client.DeleteAsync("/api/Logs/cleanup?daysToKeep=180");
+
+                // Assert
+                response.StatusCode.Should().Be(HttpStatusCode.OK);
+                
+                var content = await response.Content.ReadAsStringAsync();
+                var result = JsonSerializer.Deserialize<JsonElement>(content);
+                result.GetProperty("deletedCount").ValueKind.Should().Be(JsonValueKind.Number);
+            }
+            finally
+            {
+                Client.DefaultRequestHeaders.Authorization = null;
+            }
+        }
+
+        [Fact]
+        public async Task CleanupOldLogs_WithDefaultDaysToKeep_ShouldReturnOk()
+        {
+            var token = await GetAuthTokenAsync();
+            Client.DefaultRequestHeaders.Authorization = 
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            try
+            {
+                // Act - Test without daysToKeep parameter (should use default 30)
+                var response = await Client.DeleteAsync("/api/Logs/cleanup");
+
+                // Assert
+                response.StatusCode.Should().Be(HttpStatusCode.OK);
+                
+                var content = await response.Content.ReadAsStringAsync();
+                var result = JsonSerializer.Deserialize<JsonElement>(content);
+                result.GetProperty("deletedCount").ValueKind.Should().Be(JsonValueKind.Number);
             }
             finally
             {

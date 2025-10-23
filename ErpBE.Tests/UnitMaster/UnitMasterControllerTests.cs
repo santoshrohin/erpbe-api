@@ -411,5 +411,181 @@ namespace ErpBE.Tests.UnitMaster
             var unitId = int.Parse(await response.Content.ReadAsStringAsync());
             await Client.DeleteAsync($"/api/UnitMaster/{unitId}");
         }
+
+        [Fact]
+        public async Task GetUnitMasterByName_WithExistingUnit_ShouldReturnOk()
+        {
+            // Arrange
+            var token = await GetAuthTokenAsync();
+            Client.DefaultRequestHeaders.Authorization = 
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            // Create a test unit (keep name short to fit in database column)
+            var uniqueName = "BY" + Guid.NewGuid().ToString().Substring(0, 4);
+            var createRequest = new CreateUnitMasterRequest
+            {
+                UnitName = uniqueName,
+                UnitDescription = "Get by name test",
+                CompanyId = 1,
+                IsActive = true
+            };
+            var createJson = JsonSerializer.Serialize(createRequest);
+            var createContent = new StringContent(createJson, Encoding.UTF8, "application/json");
+            var createResponse = await Client.PostAsync("/api/UnitMaster", createContent);
+            var unitId = int.Parse(await createResponse.Content.ReadAsStringAsync());
+
+            try
+            {
+                // Act - Get by name
+                var response = await Client.GetAsync($"/api/UnitMaster/name/{uniqueName}?companyId=1");
+
+                // Assert
+                response.StatusCode.Should().Be(HttpStatusCode.OK);
+                var content = await response.Content.ReadAsStringAsync();
+                var unit = JsonSerializer.Deserialize<UnitMasterDto>(content, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                unit.Should().NotBeNull();
+                unit!.UnitName.Should().Be(uniqueName);
+            }
+            finally
+            {
+                // Cleanup
+                await Client.DeleteAsync($"/api/UnitMaster/{unitId}");
+            }
+        }
+
+        [Fact]
+        public async Task GetUnitMasterByName_WithNonExistingUnit_ShouldReturnNotFound()
+        {
+            // Arrange
+            var token = await GetAuthTokenAsync();
+            Client.DefaultRequestHeaders.Authorization = 
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            // Act
+            var response = await Client.GetAsync($"/api/UnitMaster/name/NONEXISTENT_UNIT_{Guid.NewGuid()}?companyId=1");
+
+            // Assert
+            response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        }
+
+        [Fact]
+        public async Task CheckUnitNameUnique_WithUniqueName_ShouldReturnTrue()
+        {
+            // Arrange
+            var token = await GetAuthTokenAsync();
+            Client.DefaultRequestHeaders.Authorization = 
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            var uniqueName = "UNIQUE" + Guid.NewGuid().ToString().Substring(0, 8);
+
+            // Act
+            var response = await Client.GetAsync($"/api/UnitMaster/check-unique?unitName={uniqueName}&companyId=1");
+
+            // Assert
+            response.StatusCode.Should().Be(HttpStatusCode.OK);
+            var content = await response.Content.ReadAsStringAsync();
+            var result = JsonSerializer.Deserialize<JsonElement>(content);
+            result.GetProperty("isUnique").GetBoolean().Should().BeTrue();
+        }
+
+        [Fact]
+        public async Task CheckUnitNameUnique_WithExistingName_ShouldReturnFalse()
+        {
+            // Arrange
+            var token = await GetAuthTokenAsync();
+            Client.DefaultRequestHeaders.Authorization = 
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            // Create a test unit (keep name short)
+            var existingName = "EX" + Guid.NewGuid().ToString().Substring(0, 4);
+            var createRequest = new CreateUnitMasterRequest
+            {
+                UnitName = existingName,
+                UnitDescription = "Uniqueness check test",
+                CompanyId = 1,
+                IsActive = true
+            };
+            var createJson = JsonSerializer.Serialize(createRequest);
+            var createContent = new StringContent(createJson, Encoding.UTF8, "application/json");
+            var createResponse = await Client.PostAsync("/api/UnitMaster", createContent);
+            var unitId = int.Parse(await createResponse.Content.ReadAsStringAsync());
+
+            try
+            {
+                // Act - Check if the existing name is unique
+                var response = await Client.GetAsync($"/api/UnitMaster/check-unique?unitName={existingName}&companyId=1");
+
+                // Assert
+                response.StatusCode.Should().Be(HttpStatusCode.OK);
+                var content = await response.Content.ReadAsStringAsync();
+                var result = JsonSerializer.Deserialize<JsonElement>(content);
+                result.GetProperty("isUnique").GetBoolean().Should().BeFalse();
+            }
+            finally
+            {
+                // Cleanup
+                await Client.DeleteAsync($"/api/UnitMaster/{unitId}");
+            }
+        }
+
+        [Fact]
+        public async Task CheckUnitNameUnique_WithExcludeId_ShouldReturnTrue()
+        {
+            // Arrange
+            var token = await GetAuthTokenAsync();
+            Client.DefaultRequestHeaders.Authorization = 
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            // Create a test unit (keep name short)
+            var unitName = "EX" + Guid.NewGuid().ToString().Substring(0, 3);
+            var createRequest = new CreateUnitMasterRequest
+            {
+                UnitName = unitName,
+                UnitDescription = "Exclude test",
+                CompanyId = 1,
+                IsActive = true
+            };
+            var createJson = JsonSerializer.Serialize(createRequest);
+            var createContent = new StringContent(createJson, Encoding.UTF8, "application/json");
+            var createResponse = await Client.PostAsync("/api/UnitMaster", createContent);
+            var unitId = int.Parse(await createResponse.Content.ReadAsStringAsync());
+
+            try
+            {
+                // Act - Check uniqueness excluding the current unit's ID (useful for updates)
+                var response = await Client.GetAsync($"/api/UnitMaster/check-unique?unitName={unitName}&companyId=1&excludeId={unitId}");
+
+                // Assert - Should return true because we're excluding the only record with this name
+                response.StatusCode.Should().Be(HttpStatusCode.OK);
+                var content = await response.Content.ReadAsStringAsync();
+                var result = JsonSerializer.Deserialize<JsonElement>(content);
+                result.GetProperty("isUnique").GetBoolean().Should().BeTrue();
+            }
+            finally
+            {
+                // Cleanup
+                await Client.DeleteAsync($"/api/UnitMaster/{unitId}");
+            }
+        }
+
+        [Fact]
+        public async Task GetUnitMasterByName_WithoutAuth_ShouldReturnUnauthorized()
+        {
+            // Act
+            var response = await Client.GetAsync("/api/UnitMaster/name/TESTUNIT?companyId=1");
+
+            // Assert
+            response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        }
+
+        [Fact]
+        public async Task CheckUnitNameUnique_WithoutAuth_ShouldReturnUnauthorized()
+        {
+            // Act
+            var response = await Client.GetAsync("/api/UnitMaster/check-unique?unitName=TEST&companyId=1");
+
+            // Assert
+            response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        }
     }
 }

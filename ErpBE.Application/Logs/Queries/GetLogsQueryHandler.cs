@@ -17,6 +17,9 @@ namespace ErpBE.Application.Logs.Queries
         {
             var parameters = request.QueryParameters;
 
+            // Cap page size at 100 to match stored procedure behavior
+            var actualPageSize = Math.Min(Math.Max(parameters.PageSize, 1), 100);
+
             var (logs, totalCount) = await _logsRepository.GetLogsAsync(
                 parameters.PageNumber,
                 parameters.PageSize,
@@ -25,7 +28,7 @@ namespace ErpBE.Application.Logs.Queries
                 parameters.StartDate,
                 parameters.EndDate);
 
-            var totalPages = (int)Math.Ceiling((double)totalCount / parameters.PageSize);
+            var totalPages = (int)Math.Ceiling((double)totalCount / actualPageSize);
 
             var logDtos = logs.Select(log => new LogDto
             {
@@ -45,7 +48,7 @@ namespace ErpBE.Application.Logs.Queries
                 Data = logDtos,
                 TotalCount = totalCount,
                 PageNumber = parameters.PageNumber,
-                PageSize = parameters.PageSize,
+                PageSize = actualPageSize,
                 TotalPages = totalPages,
                 HasPreviousPage = parameters.PageNumber > 1,
                 HasNextPage = parameters.PageNumber < totalPages

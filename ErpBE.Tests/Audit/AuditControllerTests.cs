@@ -48,8 +48,8 @@ namespace ErpBE.Tests.Audit
                 createResponse.EnsureSuccessStatusCode();
 
                 var createContent = await createResponse.Content.ReadAsStringAsync();
-                var createdUnit = JsonSerializer.Deserialize<JsonElement>(createContent);
-                var unitId = createdUnit.GetProperty("id").GetInt32();
+                // API returns just the integer ID, not an object
+                var unitId = int.Parse(createContent);
 
                 // Now query audit trail
                 var response = await Client.GetAsync("/api/Audit/ITEM_UNIT_MASTER");
@@ -115,8 +115,8 @@ namespace ErpBE.Tests.Audit
                 createResponse.EnsureSuccessStatusCode();
 
                 var createContent = await createResponse.Content.ReadAsStringAsync();
-                var createdUnit = JsonSerializer.Deserialize<JsonElement>(createContent);
-                var unitId = createdUnit.GetProperty("id").GetInt32();
+                // API returns just the integer ID, not an object
+                var unitId = int.Parse(createContent);
 
                 // Get audit trail for this specific record
                 var response = await Client.GetAsync($"/api/Audit/ITEM_UNIT_MASTER/{unitId}");

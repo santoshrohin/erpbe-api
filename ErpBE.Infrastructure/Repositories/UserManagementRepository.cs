@@ -1,5 +1,6 @@
 using ErpBE.Application.DTOs;
 using ErpBE.Application.Interfaces;
+using ErpBE.Application.Common;
 using Dapper;
 using System.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
@@ -136,9 +137,12 @@ namespace ErpBE.Infrastructure.Repositories
         {
             using var connection = new SqlConnection(_connectionString);
             
+            // Encrypt password using legacy encryption
+            var encryptedPassword = LegacyEncryption.Encrypt(newPassword);
+            
             var parameters = new DynamicParameters();
             parameters.Add("@UserId", userId);
-            parameters.Add("@NewPassword", newPassword); // Note: In production, hash this password
+            parameters.Add("@NewPassword", encryptedPassword);
 
             var result = await connection.ExecuteAsync("SP_ChangePassword", parameters, commandType: System.Data.CommandType.StoredProcedure);
             return result > 0;

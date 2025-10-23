@@ -85,6 +85,49 @@ namespace ErpBE.API.Controllers.Master
         }
 
         /// <summary>
+        /// Gets a unit master by name.
+        /// </summary>
+        /// <param name="unitName">The name of the unit master.</param>
+        /// <param name="companyId">The company ID.</param>
+        /// <returns>The unit master details.</returns>
+        [HttpGet("name/{unitName}")]
+        [ProducesResponseType(typeof(UnitMasterDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> GetUnitMasterByName(string unitName, [FromQuery] int companyId)
+        {
+            var query = new GetUnitMasterByNameQuery { UnitName = unitName, CompanyId = companyId };
+            var unit = await _mediator.Send(query);
+            
+            if (unit == null)
+            {
+                return NotFound(new { message = $"Unit master with name '{unitName}' not found for company {companyId}." });
+            }
+            
+            return Ok(unit);
+        }
+
+        /// <summary>
+        /// Checks if a unit name is unique within a company.
+        /// </summary>
+        /// <param name="unitName">The unit name to check.</param>
+        /// <param name="companyId">The company ID.</param>
+        /// <param name="excludeId">Optional ID to exclude from uniqueness check (for updates).</param>
+        /// <returns>Indication of whether the name is unique.</returns>
+        [HttpGet("check-unique")]
+        [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+        public async Task<IActionResult> CheckUnitNameUnique([FromQuery] string unitName, [FromQuery] int companyId, [FromQuery] int? excludeId = null)
+        {
+            var query = new CheckUnitNameUniqueQuery 
+            { 
+                UnitName = unitName, 
+                CompanyId = companyId, 
+                ExcludeId = excludeId 
+            };
+            var isUnique = await _mediator.Send(query);
+            return Ok(new { isUnique });
+        }
+
+        /// <summary>
         /// Gets a paginated list of unit masters with server-side filtering, searching, and sorting.
         /// </summary>
         /// <param name="queryParameters">Query parameters for pagination and filtering.</param>
