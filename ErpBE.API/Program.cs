@@ -164,6 +164,9 @@ builder.Services.AddScoped<IUserManagementService, UserManagementService>();
 builder.Services.AddScoped<IUnitMasterRepository, UnitMasterRepository>();
 builder.Services.AddScoped<IUnitMasterService, UnitMasterService>();
 
+// Logs Repository
+builder.Services.AddScoped<ILogsRepository, LogsRepository>();
+
 // Audit services
 builder.Services.AddScoped<IAuditService, AuditService>();
 

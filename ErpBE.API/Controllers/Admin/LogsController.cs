@@ -1,8 +1,9 @@
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Data.SqlClient;
-using Dapper;
+using MediatR;
 using ErpBE.API.Common;
+using ErpBE.Application.Logs.Queries;
+using ErpBE.Application.Logs.Commands;
+using ErpBE.Application.Logs.DTOs;
 
 namespace ErpBE.API.Controllers.Admin
 {
@@ -11,14 +12,11 @@ namespace ErpBE.API.Controllers.Admin
     [AuthorizeAdmin] // Only Admin can view logs
     public class LogsController : ControllerBase
     {
-        private readonly IConfiguration _configuration;
-        private readonly string _connectionString;
+        private readonly IMediator _mediator;
 
-        public LogsController(IConfiguration configuration)
+        public LogsController(IMediator mediator)
         {
-            _configuration = configuration;
-            _connectionString = _configuration.GetConnectionString("DefaultConnection") 
-                ?? throw new InvalidOperationException("Connection string not found");
+            _mediator = mediator;
         }
 
         /// <summary>
@@ -42,79 +40,21 @@ namespace ErpBE.API.Controllers.Admin
         {
             try
             {
-                var offset = (pageNumber - 1) * pageSize;
-                
-                var whereClause = "WHERE 1=1";
-                var parameters = new DynamicParameters();
-                
-                if (!string.IsNullOrEmpty(level))
+                var query = new GetLogsQuery
                 {
-                    whereClause += " AND Level = @Level";
-                    parameters.Add("@Level", level);
-                }
-                
-                if (!string.IsNullOrEmpty(searchTerm))
-                {
-                    whereClause += " AND Message LIKE @SearchTerm";
-                    parameters.Add("@SearchTerm", $"%{searchTerm}%");
-                }
-                
-                if (startDate.HasValue)
-                {
-                    whereClause += " AND TimeStamp >= @StartDate";
-                    parameters.Add("@StartDate", startDate.Value);
-                }
-                
-                if (endDate.HasValue)
-                {
-                    whereClause += " AND TimeStamp <= @EndDate";
-                    parameters.Add("@EndDate", endDate.Value);
-                }
+                    QueryParameters = new LogsQueryParameters
+                    {
+                        PageNumber = pageNumber,
+                        PageSize = pageSize,
+                        Level = level,
+                        SearchTerm = searchTerm,
+                        StartDate = startDate,
+                        EndDate = endDate
+                    }
+                };
 
-                // Get total count
-                var countQuery = $@"
-                    SELECT COUNT(*) 
-                    FROM Logs 
-                    {whereClause}";
-
-                using var connection = new SqlConnection(_connectionString);
-                var count = await connection.QuerySingleAsync<int>(countQuery, parameters);
-
-                // Get logs
-                var logsQuery = $@"
-                    SELECT 
-                        Id,
-                        TimeStamp,
-                        ISNULL(Level, 'Information') as Level,
-                        ISNULL(Message, 'No message') as Message,
-                        ISNULL(Exception, '') as Exception,
-                        ISNULL(Properties, '') as Properties,
-                        ISNULL(UserId, '') as UserId,
-                        ISNULL(RequestId, '') as RequestId,
-                        ISNULL(ActionName, '') as ActionName
-                    FROM Logs 
-                    {whereClause}
-                    ORDER BY TimeStamp DESC
-                    OFFSET @Offset ROWS
-                    FETCH NEXT @PageSize ROWS ONLY";
-
-                parameters.Add("@Offset", offset);
-                parameters.Add("@PageSize", pageSize);
-
-                var logs = await connection.QueryAsync(logsQuery, parameters);
-
-                var totalPages = (int)Math.Ceiling((double)count / pageSize);
-
-                return Ok(new
-                {
-                    Data = logs,
-                    TotalCount = count,
-                    PageNumber = pageNumber,
-                    PageSize = pageSize,
-                    TotalPages = totalPages,
-                    HasPreviousPage = pageNumber > 1,
-                    HasNextPage = pageNumber < totalPages
-                });
+                var result = await _mediator.Send(query);
+                return Ok(result);
             }
             catch (Exception ex)
             {
@@ -131,64 +71,13 @@ namespace ErpBE.API.Controllers.Admin
         {
             try
             {
-                using var connection = new SqlConnection(_connectionString);
-                
-                // Use stored procedure for better performance
-                var results = await connection.QueryMultipleAsync("SP_GetLogStatistics");
-                var levelStats = await results.ReadAsync();
-                var dailyStats = await results.ReadAsync();
-
-                return Ok(new
-                {
-                    LevelStatistics = levelStats,
-                    DailyStatistics = dailyStats
-                });
+                var query = new GetLogStatisticsQuery();
+                var result = await _mediator.Send(query);
+                return Ok(result);
             }
             catch (Exception ex)
             {
                 return StatusCode(500, new { message = "Error retrieving log statistics", error = ex.Message });
-            }
-        }
-
-        /// <summary>
-        /// Debug endpoint to see raw database structure
-        /// </summary>
-        /// <returns>Raw database data</returns>
-        [HttpGet("debug")]
-        [AuthorizeAdmin]
-        public async Task<IActionResult> DebugLogs()
-        {
-            try
-            {
-                using var connection = new SqlConnection(_connectionString);
-                
-                // Get table structure
-                var structureQuery = @"
-                    SELECT 
-                        COLUMN_NAME,
-                        DATA_TYPE,
-                        IS_NULLABLE,
-                        CHARACTER_MAXIMUM_LENGTH
-                    FROM INFORMATION_SCHEMA.COLUMNS 
-                    WHERE TABLE_NAME = 'Logs' 
-                    ORDER BY ORDINAL_POSITION";
-                
-                var structure = await connection.QueryAsync(structureQuery);
-                
-                // Get sample data
-                var sampleQuery = "SELECT TOP 3 * FROM Logs ORDER BY Id DESC";
-                var sampleData = await connection.QueryAsync(sampleQuery);
-                
-                return Ok(new
-                {
-                    TableStructure = structure,
-                    SampleData = sampleData,
-                    Message = "Debug information retrieved successfully"
-                });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = "Error retrieving debug info", error = ex.Message });
             }
         }
 
@@ -203,17 +92,8 @@ namespace ErpBE.API.Controllers.Admin
         {
             try
             {
-                using var connection = new SqlConnection(_connectionString);
-                
-                // Use stored procedure for better performance and safety
-                var parameters = new DynamicParameters();
-                parameters.Add("@DaysToKeep", daysToKeep);
-                parameters.Add("@DeletedCount", dbType: System.Data.DbType.Int32, direction: System.Data.ParameterDirection.Output);
-
-                await connection.ExecuteAsync("SP_CleanupOldLogs", parameters, commandType: System.Data.CommandType.StoredProcedure);
-                
-                var deletedCount = parameters.Get<int>("@DeletedCount");
-
+                var command = new CleanupOldLogsCommand { DaysToKeep = daysToKeep };
+                var deletedCount = await _mediator.Send(command);
                 return Ok(new { message = $"Deleted {deletedCount} old log entries", deletedCount });
             }
             catch (Exception ex)
