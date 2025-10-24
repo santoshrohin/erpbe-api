@@ -97,12 +97,6 @@ namespace ErpBE.API.Controllers.Master
         {
             var query = new GetUnitMasterByNameQuery { UnitName = unitName, CompanyId = companyId };
             var unit = await _mediator.Send(query);
-            
-            if (unit == null)
-            {
-                return NotFound(new { message = $"Unit master with name '{unitName}' not found for company {companyId}." });
-            }
-            
             return Ok(unit);
         }
 

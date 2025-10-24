@@ -27,6 +27,28 @@ namespace ErpBE.API.Common
                 context.Result = new BadRequestObjectResult(response);
                 context.ExceptionHandled = true;
             }
+            else if (context.Exception is InvalidOperationException invalidOpException)
+            {
+                var response = new
+                {
+                    message = invalidOpException.Message,
+                    statusCode = 400
+                };
+
+                context.Result = new BadRequestObjectResult(response);
+                context.ExceptionHandled = true;
+            }
+            else if (context.Exception is KeyNotFoundException keyNotFoundException)
+            {
+                var response = new
+                {
+                    message = keyNotFoundException.Message,
+                    statusCode = 404
+                };
+
+                context.Result = new NotFoundObjectResult(response);
+                context.ExceptionHandled = true;
+            }
         }
     }
 }

@@ -15,7 +15,14 @@ namespace ErpBE.Application.UnitMaster.Queries
 
         public async Task<UnitMasterDto?> Handle(GetUnitMasterByNameQuery request, CancellationToken cancellationToken)
         {
-            return await _repository.GetUnitMasterByNameAsync(request.UnitName, request.CompanyId);
+            var unit = await _repository.GetUnitMasterByNameAsync(request.UnitName, request.CompanyId);
+            
+            if (unit == null)
+            {
+                throw new KeyNotFoundException($"Unit master with name '{request.UnitName}' not found for company {request.CompanyId}.");
+            }
+            
+            return unit;
         }
     }
 }
