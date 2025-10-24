@@ -1,0 +1,31 @@
+CREATE OR ALTER PROCEDURE [dbo].[ERP_CreateCustomerTypeMaster]
+    @CTM_CM_COMP_ID INT,
+    @CTM_TYPE_CODE VARCHAR(50),
+    @CTM_TYPE_DESC VARCHAR(150),
+    @CTM_FIRST_LETTER VARCHAR(50),
+    @CTM_CODE INT OUTPUT
+AS
+BEGIN
+    SET NOCOUNT OFF;
+
+    INSERT INTO CUSTOMER_TYPE_MASTER (
+        CTM_CM_COMP_ID,
+        CTM_TYPE_CODE,
+        CTM_TYPE_DESC,
+        CTM_FIRST_LETTER,
+        ES_DELETE,
+        MODIFY
+    )
+    VALUES (
+        @CTM_CM_COMP_ID,
+        @CTM_TYPE_CODE,
+        @CTM_TYPE_DESC,
+        @CTM_FIRST_LETTER,
+        0,
+        0
+    );
+
+    SET @CTM_CODE = SCOPE_IDENTITY();
+END;
+GO
+

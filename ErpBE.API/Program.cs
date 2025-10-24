@@ -167,6 +167,15 @@ builder.Services.AddScoped<IUnitMasterService, UnitMasterService>();
 // Item Category Master services
 builder.Services.AddScoped<IItemCategoryMasterRepository, ItemCategoryMasterRepository>();
 
+// SO Type Master services
+builder.Services.AddScoped<ISoTypeMasterRepository, SoTypeMasterRepository>();
+
+// Customer Type Master services
+builder.Services.AddScoped<ICustomerTypeMasterRepository, CustomerTypeMasterRepository>();
+
+// Customer Master services
+builder.Services.AddScoped<ICustomerMasterRepository, CustomerMasterRepository>();
+
 // Logs Repository
 builder.Services.AddScoped<ILogsRepository, LogsRepository>();
 

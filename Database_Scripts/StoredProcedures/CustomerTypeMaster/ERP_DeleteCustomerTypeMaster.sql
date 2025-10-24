@@ -1,0 +1,18 @@
+CREATE OR ALTER PROCEDURE [dbo].[ERP_DeleteCustomerTypeMaster]
+    @CTM_CODE INT,
+    @CTM_CM_COMP_ID INT
+AS
+BEGIN
+    SET NOCOUNT OFF;
+
+    UPDATE CUSTOMER_TYPE_MASTER
+    SET 
+        ES_DELETE = 1,
+        MODIFY = 0
+    WHERE 
+        CTM_CODE = @CTM_CODE 
+        AND CTM_CM_COMP_ID = @CTM_CM_COMP_ID
+        AND ES_DELETE = 0;
+END;
+GO
+

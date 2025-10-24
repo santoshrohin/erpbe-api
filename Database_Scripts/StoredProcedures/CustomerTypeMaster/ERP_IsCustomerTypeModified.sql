@@ -1,0 +1,14 @@
+CREATE OR ALTER PROCEDURE [dbo].[ERP_IsCustomerTypeModified]
+    @CTM_CODE INT,
+    @IsModified BIT OUTPUT
+AS
+BEGIN
+    SET NOCOUNT OFF;
+
+    SELECT @IsModified = ISNULL(MODIFY, 0)
+    FROM CUSTOMER_TYPE_MASTER
+    WHERE CTM_CODE = @CTM_CODE
+        AND ES_DELETE = 0;
+END;
+GO
+

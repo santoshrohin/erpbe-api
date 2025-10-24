@@ -1,0 +1,24 @@
+CREATE OR ALTER PROCEDURE [dbo].[ERP_GetCustomerTypeMasterByTypeCode]
+    @CTM_TYPE_CODE VARCHAR(50),
+    @CTM_CM_COMP_ID INT
+AS
+BEGIN
+    SET NOCOUNT OFF;
+
+    SELECT 
+        CTM_CODE,
+        CTM_CM_COMP_ID,
+        CTM_TYPE_CODE,
+        CTM_TYPE_DESC,
+        CTM_FIRST_LETTER,
+        ES_DELETE,
+        MODIFY
+    FROM 
+        CUSTOMER_TYPE_MASTER
+    WHERE 
+        CTM_TYPE_CODE = @CTM_TYPE_CODE
+        AND CTM_CM_COMP_ID = @CTM_CM_COMP_ID
+        AND ES_DELETE = 0;
+END;
+GO
+
