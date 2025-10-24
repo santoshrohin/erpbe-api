@@ -1,5 +1,5 @@
 using ErpBE.Application.CustomerMaster.Queries;
-using ErpBE.Application.Interfaces;
+using ErpBE.Application.CustomerMaster.Interfaces;
 using MediatR;
 
 namespace ErpBE.Application.CustomerMaster.Handlers
@@ -15,7 +15,7 @@ namespace ErpBE.Application.CustomerMaster.Handlers
 
         public async Task<bool> Handle(CheckPartyNameUniqueQuery request, CancellationToken cancellationToken)
         {
-            return await _repository.IsPartyNameUniqueAsync(request.PartyName, request.Id, request.CompanyId, cancellationToken);
+            return await _repository.IsPartyNameUniqueAsync(request.PartyName, request.Id, request.CompanyId);
         }
     }
 }

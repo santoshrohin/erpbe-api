@@ -277,17 +277,18 @@ namespace ErpBE.Infrastructure.Repositories
         {
             using var connection = new SqlConnection(_connectionString);
             
-            // First get the username and company ID for this user
+            // First get the username and company ID for this user using stored procedure
             var userInfo = await connection.QueryFirstOrDefaultAsync<dynamic>(
-                "SELECT UM_USERNAME, UM_CM_ID FROM USER_MASTER WHERE UM_CODE = @UserId",
-                new { UserId = userId });
+                "ERP_GetUserBasicInfo",
+                new { UserId = userId },
+                commandType: System.Data.CommandType.StoredProcedure);
 
             if (userInfo == null)
                 return new List<string>();
 
             var parameters = new DynamicParameters();
-            parameters.Add("@UserName", userInfo.UM_USERNAME);
-            parameters.Add("@CompanyId", userInfo.UM_CM_ID.ToString());
+            parameters.Add("@UserName", userInfo.Username);
+            parameters.Add("@CompanyId", userInfo.CompanyId.ToString());
 
             var roles = await connection.QueryAsync<string>("SP_GetUserRoles", parameters, commandType: System.Data.CommandType.StoredProcedure);
             return roles.ToList();

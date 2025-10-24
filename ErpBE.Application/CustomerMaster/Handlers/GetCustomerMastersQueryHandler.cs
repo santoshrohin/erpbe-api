@@ -1,7 +1,7 @@
 using ErpBE.Application.Common.Models;
 using ErpBE.Application.CustomerMaster.Queries;
+using ErpBE.Application.CustomerMaster.Interfaces;
 using ErpBE.Application.DTOs;
-using ErpBE.Application.Interfaces;
 using MediatR;
 
 namespace ErpBE.Application.CustomerMaster.Handlers
@@ -17,7 +17,7 @@ namespace ErpBE.Application.CustomerMaster.Handlers
 
         public async Task<PagedResponse<CustomerMasterDto>> Handle(GetCustomerMastersQuery request, CancellationToken cancellationToken)
         {
-            return await _repository.GetAllAsync(request.Parameters, cancellationToken);
+            return await _repository.GetAllAsync(request.Parameters);
         }
     }
 }

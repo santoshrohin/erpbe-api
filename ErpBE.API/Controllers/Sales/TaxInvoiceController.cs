@@ -1,0 +1,471 @@
+using ErpBE.Application.DTOs.TaxInvoice;
+using ErpBE.Application.TaxInvoice.Commands;
+using ErpBE.Application.TaxInvoice.Queries;
+using MediatR;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+
+namespace ErpBE.API.Controllers.Sales
+{
+    [Route("api/[controller]")]
+    [ApiController]
+    [Authorize]
+    public class TaxInvoiceController : ControllerBase
+    {
+        private readonly IMediator _mediator;
+        private readonly ILogger<TaxInvoiceController> _logger;
+
+        public TaxInvoiceController(IMediator mediator, ILogger<TaxInvoiceController> logger)
+        {
+            _mediator = mediator;
+            _logger = logger;
+        }
+
+        /// <summary>
+        /// Get all Tax Invoices with filtering, searching, sorting, and pagination
+        /// </summary>
+        [HttpGet]
+        public async Task<ActionResult<TaxInvoicePagedResponse>> GetAllTaxInvoices([FromQuery] GetAllTaxInvoicesQuery query)
+        {
+            _logger.LogInformation("GET /api/TaxInvoice - Getting Tax Invoices for Company: {CompanyId}", query.CompanyId);
+            
+            var result = await _mediator.Send(query);
+            return Ok(result);
+        }
+
+        /// <summary>
+        /// Get Tax Invoice by ID
+        /// </summary>
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetTaxInvoiceById(int id, [FromQuery] int companyId)
+        {
+            _logger.LogInformation("GET /api/TaxInvoice/{Id} - Getting Tax Invoice: {InvoiceCode}, Company: {CompanyId}", id, id, companyId);
+
+            var query = new GetTaxInvoiceByIdQuery
+            {
+                InvoiceCode = id,
+                CompanyCode = companyId
+            };
+
+            var result = await _mediator.Send(query);
+
+            if (result == null)
+            {
+                return NotFound(new { message = $"Tax Invoice with ID '{id}' not found." });
+            }
+
+            return Ok(result);
+        }
+
+        /// <summary>
+        /// Create a new Tax Invoice
+        /// </summary>
+        [HttpPost]
+        public async Task<IActionResult> CreateTaxInvoice([FromBody] CreateTaxInvoiceRequest request)
+        {
+            _logger.LogInformation("POST /api/TaxInvoice - Creating Tax Invoice for Company: {CompanyCode}, Customer: {CustomerCode}", 
+                request.CompanyCode, request.CustomerCode);
+
+            var command = MapRequestToCommand(request);
+            var result = await _mediator.Send(command);
+
+            return CreatedAtAction(nameof(GetTaxInvoiceById), 
+                new { id = result.InvoiceCode, companyId = result.CompanyCode }, result);
+        }
+
+        /// <summary>
+        /// Update an existing Tax Invoice
+        /// </summary>
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateTaxInvoice(int id, [FromBody] UpdateTaxInvoiceRequest request)
+        {
+            if (id != request.InvoiceCode)
+            {
+                return BadRequest(new { message = "Invoice Code in URL does not match Invoice Code in request body." });
+            }
+
+            _logger.LogInformation("PUT /api/TaxInvoice/{Id} - Updating Tax Invoice: {InvoiceCode}", id, id);
+
+            var command = MapUpdateRequestToCommand(request);
+            var result = await _mediator.Send(command);
+
+            return Ok(result);
+        }
+
+        /// <summary>
+        /// Delete a Tax Invoice (soft delete)
+        /// </summary>
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteTaxInvoice(int id, [FromQuery] int companyId)
+        {
+            _logger.LogInformation("DELETE /api/TaxInvoice/{Id} - Deleting Tax Invoice: {InvoiceCode}, Company: {CompanyId}", id, id, companyId);
+
+            var command = new DeleteTaxInvoiceCommand
+            {
+                InvoiceCode = id,
+                CompanyCode = companyId
+            };
+
+            var result = await _mediator.Send(command);
+
+            if (!result)
+            {
+                return NotFound(new { message = $"Tax Invoice with ID '{id}' not found or could not be deleted." });
+            }
+
+            return NoContent();
+        }
+
+        #region Helper Methods
+
+        private CreateTaxInvoiceCommand MapRequestToCommand(CreateTaxInvoiceRequest request)
+        {
+            return new CreateTaxInvoiceCommand
+            {
+                CompanyCode = request.CompanyCode,
+                InvoiceDate = request.InvoiceDate,
+                CustomerCode = request.CustomerCode,
+                CustomerPoCode = request.CustomerPoCode,
+                InvoiceType = request.InvoiceType,
+                Type = request.Type,
+                PaymentMethodCode = request.PaymentMethodCode,
+                DateFrom = request.DateFrom,
+                DateTo = request.DateTo,
+                IsSupplementary = request.IsSupplementary,
+                Process = request.Process,
+                DiscountPercentage = request.DiscountPercentage,
+                PackingAmount = request.PackingAmount,
+                PackingDescription = request.PackingDescription,
+                TaxCode = request.TaxCode,
+                TcsPercentage = request.TcsPercentage,
+                FreightCharges = request.FreightCharges,
+                VehicleNumber = request.VehicleNumber,
+                TransportName = request.TransportName,
+                IssueDate = request.IssueDate,
+                RemovalDate = request.RemovalDate,
+                IssueTime = request.IssueTime,
+                RemovalTime = request.RemovalTime,
+                StorageLocation = request.StorageLocation,
+                Remarks = request.Remarks,
+                LrNumber = request.LrNumber,
+                LrDate = request.LrDate,
+                CreditDays = request.CreditDays,
+                AsnNumber = request.AsnNumber,
+                NatureOfProduct = request.NatureOfProduct,
+                PreparedBy = request.PreparedBy,
+                ReworkFlag = request.ReworkFlag,
+                TariffNumber = request.TariffNumber,
+                TariffName = request.TariffName,
+                TransportAmount = request.TransportAmount,
+                CourierAmount = request.CourierAmount,
+                DeliveryAddress = request.DeliveryAddress,
+                AlternateCustomerCode = request.AlternateCustomerCode,
+                OtherAmount = request.OtherAmount,
+                BuyerName = request.BuyerName,
+                BuyerAddress = request.BuyerAddress,
+                InsuranceAmount = request.InsuranceAmount,
+                AdvanceDuty = request.AdvanceDuty,
+                OctriAmount = request.OctriAmount,
+                ExportFlag = request.ExportFlag,
+                FinalDestination = request.FinalDestination,
+                PreCarriage = request.PreCarriage,
+                PortOfLoading = request.PortOfLoading,
+                PortOfDischarge = request.PortOfDischarge,
+                PlaceOfDelivery = request.PlaceOfDelivery,
+                CurrencyCode = request.CurrencyCode,
+                CurrencyRate = request.CurrencyRate,
+                Clearance = request.Clearance,
+                FlightNumber = request.FlightNumber,
+                ManufacturingDate = request.ManufacturingDate,
+                ExpiryDate = request.ExpiryDate,
+                AuthorizedSignatory = request.AuthorizedSignatory,
+                AreaFormNumber = request.AreaFormNumber,
+                FormDate = request.FormDate,
+                Shipment = request.Shipment,
+                CenvatAccountNumber = request.CenvatAccountNumber,
+                BondNumber = request.BondNumber,
+                BondDate = request.BondDate,
+                Ut1FileNumber = request.Ut1FileNumber,
+                FileNumber = request.FileNumber,
+                ValidityDate = request.ValidityDate,
+                ExaminationBoxes = request.ExaminationBoxes,
+                TermsOfDelivery = request.TermsOfDelivery,
+                TermsOfPayment = request.TermsOfPayment,
+                VoyageNumber = request.VoyageNumber,
+                PlaceOfReceipt = request.PlaceOfReceipt,
+                MarksAndNumbers = request.MarksAndNumbers,
+                NumberOfPackages = request.NumberOfPackages,
+                UnNumber = request.UnNumber,
+                HazardClass = request.HazardClass,
+                HsCodeNumber = request.HsCodeNumber,
+                ContainerNumber = request.ContainerNumber,
+                SealNumber = request.SealNumber,
+                OtsNumber = request.OtsNumber,
+                CountryOfOrigin = request.CountryOfOrigin,
+                CountryOfDestination = request.CountryOfDestination,
+                TransportBy = request.TransportBy,
+                AreaRemarks = request.AreaRemarks,
+                CarrierName = request.CarrierName,
+                CarrierBookingNumber = request.CarrierBookingNumber,
+                ShipName = request.ShipName,
+                TechnicalName = request.TechnicalName,
+                OuterPackaging = request.OuterPackaging,
+                InnerPackaging = request.InnerPackaging,
+                SubsidiaryClass = request.SubsidiaryClass,
+                UnPackingGroup = request.UnPackingGroup,
+                UnPackingCode = request.UnPackingCode,
+                EmsNumber = request.EmsNumber,
+                FlashPoint = request.FlashPoint,
+                MarinePollutant = request.MarinePollutant,
+                ShipperDeclaration = request.ShipperDeclaration,
+                IecNumber = request.IecNumber,
+                IecDate = request.IecDate,
+                CentralExciseRegistration = request.CentralExciseRegistration,
+                DateOfExamination = request.DateOfExamination,
+                SuperintendentExciseName = request.SuperintendentExciseName,
+                InspectorExciseName = request.InspectorExciseName,
+                CustomsSealNumber = request.CustomsSealNumber,
+                PermitENumber = request.PermitENumber,
+                NonCargoNumberOfPackages = request.NonCargoNumberOfPackages,
+                ShippingBillNumber = request.ShippingBillNumber,
+                LcNumber = request.LcNumber,
+                LcDate = request.LcDate,
+                TransportOwner = request.TransportOwner,
+                TransportAddress = request.TransportAddress,
+                TNumber = request.TNumber,
+                TrayCode = request.TrayCode,
+                TrayQuantity = request.TrayQuantity,
+                Address = request.Address,
+                StateCode = request.StateCode,
+                AddressSelected = request.AddressSelected,
+                HsnCode = request.HsnCode,
+                ElectronicReferenceNumber = request.ElectronicReferenceNumber,
+                TermsAndConditions = request.TermsAndConditions,
+                AuthorizedName = request.AuthorizedName,
+                ServicePercentage = request.ServicePercentage,
+                ServiceEducationCessPercentage = request.ServiceEducationCessPercentage,
+                ServiceHigherEducationCessPercentage = request.ServiceHigherEducationCessPercentage,
+                InvoiceDetails = request.InvoiceDetails.Select(d => new CreateTaxInvoiceDetailCommand
+                {
+                    ItemCode = d.ItemCode,
+                    UomCode = d.UomCode,
+                    InvoiceQuantity = d.InvoiceQuantity,
+                    Rate = d.Rate,
+                    CustomerPoCode = d.CustomerPoCode,
+                    ConversionQuantity = d.ConversionQuantity,
+                    AmortizationRate = d.AmortizationRate,
+                    NumberOfPackages = d.NumberOfPackages,
+                    PackageDescription = d.PackageDescription,
+                    QuantityPerPack = d.QuantityPerPack,
+                    DeliveryChallanNumbers = d.DeliveryChallanNumbers,
+                    DeliveryChallanDates = d.DeliveryChallanDates,
+                    ExciseNumbers = d.ExciseNumbers,
+                    ProcessCode = d.ProcessCode,
+                    GinNumber = d.GinNumber,
+                    GinDate = d.GinDate,
+                    GinReceipt = d.GinReceipt,
+                    MrCode = d.MrCode,
+                    GinAcceptance = d.GinAcceptance,
+                    CgstPercentage = d.CgstPercentage,
+                    SgstPercentage = d.SgstPercentage,
+                    IgstPercentage = d.IgstPercentage,
+                    SerialNumber = d.SerialNumber,
+                    Remarks = d.Remarks,
+                    ItemWarehouseCode = d.ItemWarehouseCode,
+                    ActualWeight = d.ActualWeight,
+                    Size = d.Size,
+                    SubHeading = d.SubHeading,
+                    BatchNumber = d.BatchNumber,
+                    PackingQuantity = d.PackingQuantity,
+                    GrossWeight = d.GrossWeight,
+                    NetWeight = d.NetWeight,
+                    SizeOfBox = d.SizeOfBox,
+                    NumberOfBarrels = d.NumberOfBarrels,
+                    NumberOfPackagesDescription = d.NumberOfPackagesDescription,
+                    ContainerNumber = d.ContainerNumber,
+                    RefundableQuantity = d.RefundableQuantity,
+                    AmortRate = d.AmortRate,
+                    HsnCode = d.HsnCode,
+                    StoreCode = d.StoreCode
+                }).ToList()
+            };
+        }
+
+        private UpdateTaxInvoiceCommand MapUpdateRequestToCommand(UpdateTaxInvoiceRequest request)
+        {
+            return new UpdateTaxInvoiceCommand
+            {
+                InvoiceCode = request.InvoiceCode,
+                CompanyCode = request.CompanyCode,
+                InvoiceDate = request.InvoiceDate,
+                CustomerCode = request.CustomerCode,
+                CustomerPoCode = request.CustomerPoCode,
+                InvoiceType = request.InvoiceType,
+                Type = request.Type,
+                PaymentMethodCode = request.PaymentMethodCode,
+                DateFrom = request.DateFrom,
+                DateTo = request.DateTo,
+                IsSupplementary = request.IsSupplementary,
+                Process = request.Process,
+                DiscountPercentage = request.DiscountPercentage,
+                PackingAmount = request.PackingAmount,
+                PackingDescription = request.PackingDescription,
+                TaxCode = request.TaxCode,
+                TcsPercentage = request.TcsPercentage,
+                FreightCharges = request.FreightCharges,
+                VehicleNumber = request.VehicleNumber,
+                TransportName = request.TransportName,
+                IssueDate = request.IssueDate,
+                RemovalDate = request.RemovalDate,
+                IssueTime = request.IssueTime,
+                RemovalTime = request.RemovalTime,
+                StorageLocation = request.StorageLocation,
+                Remarks = request.Remarks,
+                LrNumber = request.LrNumber,
+                LrDate = request.LrDate,
+                CreditDays = request.CreditDays,
+                AsnNumber = request.AsnNumber,
+                NatureOfProduct = request.NatureOfProduct,
+                PreparedBy = request.PreparedBy,
+                ReworkFlag = request.ReworkFlag,
+                TariffNumber = request.TariffNumber,
+                TariffName = request.TariffName,
+                TransportAmount = request.TransportAmount,
+                CourierAmount = request.CourierAmount,
+                DeliveryAddress = request.DeliveryAddress,
+                AlternateCustomerCode = request.AlternateCustomerCode,
+                OtherAmount = request.OtherAmount,
+                BuyerName = request.BuyerName,
+                BuyerAddress = request.BuyerAddress,
+                InsuranceAmount = request.InsuranceAmount,
+                AdvanceDuty = request.AdvanceDuty,
+                OctriAmount = request.OctriAmount,
+                ExportFlag = request.ExportFlag,
+                FinalDestination = request.FinalDestination,
+                PreCarriage = request.PreCarriage,
+                PortOfLoading = request.PortOfLoading,
+                PortOfDischarge = request.PortOfDischarge,
+                PlaceOfDelivery = request.PlaceOfDelivery,
+                CurrencyCode = request.CurrencyCode,
+                CurrencyRate = request.CurrencyRate,
+                Clearance = request.Clearance,
+                FlightNumber = request.FlightNumber,
+                ManufacturingDate = request.ManufacturingDate,
+                ExpiryDate = request.ExpiryDate,
+                AuthorizedSignatory = request.AuthorizedSignatory,
+                AreaFormNumber = request.AreaFormNumber,
+                FormDate = request.FormDate,
+                Shipment = request.Shipment,
+                CenvatAccountNumber = request.CenvatAccountNumber,
+                BondNumber = request.BondNumber,
+                BondDate = request.BondDate,
+                Ut1FileNumber = request.Ut1FileNumber,
+                FileNumber = request.FileNumber,
+                ValidityDate = request.ValidityDate,
+                ExaminationBoxes = request.ExaminationBoxes,
+                TermsOfDelivery = request.TermsOfDelivery,
+                TermsOfPayment = request.TermsOfPayment,
+                VoyageNumber = request.VoyageNumber,
+                PlaceOfReceipt = request.PlaceOfReceipt,
+                MarksAndNumbers = request.MarksAndNumbers,
+                NumberOfPackages = request.NumberOfPackages,
+                UnNumber = request.UnNumber,
+                HazardClass = request.HazardClass,
+                HsCodeNumber = request.HsCodeNumber,
+                ContainerNumber = request.ContainerNumber,
+                SealNumber = request.SealNumber,
+                OtsNumber = request.OtsNumber,
+                CountryOfOrigin = request.CountryOfOrigin,
+                CountryOfDestination = request.CountryOfDestination,
+                TransportBy = request.TransportBy,
+                AreaRemarks = request.AreaRemarks,
+                CarrierName = request.CarrierName,
+                CarrierBookingNumber = request.CarrierBookingNumber,
+                ShipName = request.ShipName,
+                TechnicalName = request.TechnicalName,
+                OuterPackaging = request.OuterPackaging,
+                InnerPackaging = request.InnerPackaging,
+                SubsidiaryClass = request.SubsidiaryClass,
+                UnPackingGroup = request.UnPackingGroup,
+                UnPackingCode = request.UnPackingCode,
+                EmsNumber = request.EmsNumber,
+                FlashPoint = request.FlashPoint,
+                MarinePollutant = request.MarinePollutant,
+                ShipperDeclaration = request.ShipperDeclaration,
+                IecNumber = request.IecNumber,
+                IecDate = request.IecDate,
+                CentralExciseRegistration = request.CentralExciseRegistration,
+                DateOfExamination = request.DateOfExamination,
+                SuperintendentExciseName = request.SuperintendentExciseName,
+                InspectorExciseName = request.InspectorExciseName,
+                CustomsSealNumber = request.CustomsSealNumber,
+                PermitENumber = request.PermitENumber,
+                NonCargoNumberOfPackages = request.NonCargoNumberOfPackages,
+                ShippingBillNumber = request.ShippingBillNumber,
+                LcNumber = request.LcNumber,
+                LcDate = request.LcDate,
+                TransportOwner = request.TransportOwner,
+                TransportAddress = request.TransportAddress,
+                TNumber = request.TNumber,
+                TrayCode = request.TrayCode,
+                TrayQuantity = request.TrayQuantity,
+                Address = request.Address,
+                StateCode = request.StateCode,
+                AddressSelected = request.AddressSelected,
+                HsnCode = request.HsnCode,
+                ElectronicReferenceNumber = request.ElectronicReferenceNumber,
+                TermsAndConditions = request.TermsAndConditions,
+                AuthorizedName = request.AuthorizedName,
+                ServicePercentage = request.ServicePercentage,
+                ServiceEducationCessPercentage = request.ServiceEducationCessPercentage,
+                ServiceHigherEducationCessPercentage = request.ServiceHigherEducationCessPercentage,
+                InvoiceDetails = request.InvoiceDetails.Select(d => new CreateTaxInvoiceDetailCommand
+                {
+                    ItemCode = d.ItemCode,
+                    UomCode = d.UomCode,
+                    InvoiceQuantity = d.InvoiceQuantity,
+                    Rate = d.Rate,
+                    CustomerPoCode = d.CustomerPoCode,
+                    ConversionQuantity = d.ConversionQuantity,
+                    AmortizationRate = d.AmortizationRate,
+                    NumberOfPackages = d.NumberOfPackages,
+                    PackageDescription = d.PackageDescription,
+                    QuantityPerPack = d.QuantityPerPack,
+                    DeliveryChallanNumbers = d.DeliveryChallanNumbers,
+                    DeliveryChallanDates = d.DeliveryChallanDates,
+                    ExciseNumbers = d.ExciseNumbers,
+                    ProcessCode = d.ProcessCode,
+                    GinNumber = d.GinNumber,
+                    GinDate = d.GinDate,
+                    GinReceipt = d.GinReceipt,
+                    MrCode = d.MrCode,
+                    GinAcceptance = d.GinAcceptance,
+                    CgstPercentage = d.CgstPercentage,
+                    SgstPercentage = d.SgstPercentage,
+                    IgstPercentage = d.IgstPercentage,
+                    SerialNumber = d.SerialNumber,
+                    Remarks = d.Remarks,
+                    ItemWarehouseCode = d.ItemWarehouseCode,
+                    ActualWeight = d.ActualWeight,
+                    Size = d.Size,
+                    SubHeading = d.SubHeading,
+                    BatchNumber = d.BatchNumber,
+                    PackingQuantity = d.PackingQuantity,
+                    GrossWeight = d.GrossWeight,
+                    NetWeight = d.NetWeight,
+                    SizeOfBox = d.SizeOfBox,
+                    NumberOfBarrels = d.NumberOfBarrels,
+                    NumberOfPackagesDescription = d.NumberOfPackagesDescription,
+                    ContainerNumber = d.ContainerNumber,
+                    RefundableQuantity = d.RefundableQuantity,
+                    AmortRate = d.AmortRate,
+                    HsnCode = d.HsnCode,
+                    StoreCode = d.StoreCode
+                }).ToList()
+            };
+        }
+
+        #endregion
+    }
+}
+

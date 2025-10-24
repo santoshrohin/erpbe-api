@@ -1,111 +1,279 @@
 using ErpBE.Application.CustomerMaster.Commands;
 using ErpBE.Application.CustomerMaster.Validators;
-using ErpBE.Application.Interfaces;
+using FluentAssertions;
 using FluentValidation.TestHelper;
-using Moq;
 using Xunit;
 
 namespace ErpBE.Tests.Validators
 {
     public class UpdateCustomerMasterCommandValidatorTests
     {
-        private readonly Mock<ICustomerMasterRepository> _mockRepository;
         private readonly UpdateCustomerMasterCommandValidator _validator;
 
         public UpdateCustomerMasterCommandValidatorTests()
         {
-            _mockRepository = new Mock<ICustomerMasterRepository>();
-            _validator = new UpdateCustomerMasterCommandValidator(_mockRepository.Object);
+            _validator = new UpdateCustomerMasterCommandValidator();
         }
 
         [Fact]
-        public async Task Should_Have_Error_When_Id_Is_Empty()
+        public void Validate_WithValidCommand_ShouldNotHaveValidationErrors()
         {
-            var command = new UpdateCustomerMasterCommand { Id = 0 };
-            var result = await _validator.TestValidateAsync(command);
-            result.ShouldHaveValidationErrorFor(x => x.Id);
-        }
-
-        [Fact]
-        public async Task Should_Have_Error_When_CompanyId_Is_Zero()
-        {
-            var command = new UpdateCustomerMasterCommand { CompanyId = 0 };
-            var result = await _validator.TestValidateAsync(command);
-            result.ShouldHaveValidationErrorFor(x => x.CompanyId);
-        }
-
-        [Fact]
-        public async Task Should_Have_Error_When_PartyCode_Is_Empty()
-        {
-            var command = new UpdateCustomerMasterCommand { PartyCode = "" };
-            var result = await _validator.TestValidateAsync(command);
-            result.ShouldHaveValidationErrorFor(x => x.PartyCode);
-        }
-
-        [Fact]
-        public async Task Should_Have_Error_When_PartyName_Is_Empty()
-        {
-            var command = new UpdateCustomerMasterCommand { PartyName = "" };
-            var result = await _validator.TestValidateAsync(command);
-            result.ShouldHaveValidationErrorFor(x => x.PartyName);
-        }
-
-        [Fact]
-        public async Task Should_Have_Error_When_AreaCode_Is_Zero()
-        {
-            var command = new UpdateCustomerMasterCommand { AreaCode = 0 };
-            var result = await _validator.TestValidateAsync(command);
-            result.ShouldHaveValidationErrorFor(x => x.AreaCode);
-        }
-
-        [Fact]
-        public async Task Should_Have_Error_When_CustomerType_Is_Zero()
-        {
-            var command = new UpdateCustomerMasterCommand { CustomerType = 0 };
-            var result = await _validator.TestValidateAsync(command);
-            result.ShouldHaveValidationErrorFor(x => x.CustomerType);
-        }
-
-        [Fact]
-        public async Task Should_Have_Error_When_Email_Is_Invalid()
-        {
-            var command = new UpdateCustomerMasterCommand { Email = "invalid-email" };
-            var result = await _validator.TestValidateAsync(command);
-            result.ShouldHaveValidationErrorFor(x => x.Email);
-        }
-
-        [Fact]
-        public async Task Should_Have_Error_When_GstNo_Is_Empty_And_LbtApplicable_Is_True()
-        {
-            var command = new UpdateCustomerMasterCommand 
-            { 
-                IsLbtApplicable = true,
-                GstNo = null
-            };
-            var result = await _validator.TestValidateAsync(command);
-            result.ShouldHaveValidationErrorFor(x => x.GstNo);
-        }
-
-        [Fact]
-        public async Task Should_Not_Have_Error_When_All_Required_Fields_Are_Valid()
-        {
+            // Arrange
             var command = new UpdateCustomerMasterCommand
             {
                 Id = 1,
                 CompanyId = 1,
-                PartyCode = "CUST001",
+                PartyCode = 1,
                 PartyName = "Test Customer",
                 AreaCode = 1,
-                CustomerType = 1
+                CustomerType = "1",
+                IsActive = true
             };
 
-            var result = await _validator.TestValidateAsync(command);
-            result.ShouldNotHaveValidationErrorFor(x => x.Id);
-            result.ShouldNotHaveValidationErrorFor(x => x.CompanyId);
-            result.ShouldNotHaveValidationErrorFor(x => x.PartyCode);
-            result.ShouldNotHaveValidationErrorFor(x => x.PartyName);
-            result.ShouldNotHaveValidationErrorFor(x => x.AreaCode);
-            result.ShouldNotHaveValidationErrorFor(x => x.CustomerType);
+            // Act
+            var result = _validator.TestValidate(command);
+
+            // Assert
+            result.ShouldNotHaveAnyValidationErrors();
+        }
+
+        [Fact]
+        public void Validate_WithInvalidId_ShouldHaveValidationError()
+        {
+            // Arrange
+            var command = new UpdateCustomerMasterCommand
+            {
+                Id = 0, // 0 is invalid
+                CompanyId = 1,
+                PartyCode = 1,
+                PartyName = "Test Customer",
+                AreaCode = 1,
+                CustomerType = "1"
+            };
+
+            // Act
+            var result = _validator.TestValidate(command);
+
+            // Assert
+            result.ShouldHaveValidationErrorFor(x => x.Id)
+                .WithErrorMessage("ID is required.");
+        }
+
+        [Theory]
+        [InlineData(0)]
+        [InlineData(-1)]
+        public void Validate_WithInvalidCompanyId_ShouldHaveValidationError(int companyId)
+        {
+            // Arrange
+            var command = new UpdateCustomerMasterCommand
+            {
+                Id = 1,
+                CompanyId = companyId,
+                PartyCode = 1,
+                PartyName = "Test Customer",
+                AreaCode = 1,
+                CustomerType = "1"
+            };
+
+            // Act
+            var result = _validator.TestValidate(command);
+
+            // Assert
+            result.ShouldHaveValidationErrorFor(x => x.CompanyId)
+                .WithErrorMessage("Company ID must be greater than 0.");
+        }
+
+        [Theory]
+        [InlineData(0)]
+        [InlineData(-1)]
+        public void Validate_WithInvalidPartyCode_ShouldHaveValidationError(int partyCode)
+        {
+            // Arrange
+            var command = new UpdateCustomerMasterCommand
+            {
+                Id = 1,
+                CompanyId = 1,
+                PartyCode = partyCode,
+                PartyName = "Test Customer",
+                AreaCode = 1,
+                CustomerType = "1"
+            };
+
+            // Act
+            var result = _validator.TestValidate(command);
+
+            // Assert
+            result.ShouldHaveValidationErrorFor(x => x.PartyCode)
+                .WithErrorMessage("Party Code must be greater than 0.");
+        }
+
+        [Theory]
+        [InlineData(null)]
+        [InlineData("")]
+        [InlineData("   ")]
+        public void Validate_WithEmptyPartyName_ShouldHaveValidationError(string partyName)
+        {
+            // Arrange
+            var command = new UpdateCustomerMasterCommand
+            {
+                Id = 1,
+                CompanyId = 1,
+                PartyCode = 1,
+                PartyName = partyName,
+                AreaCode = 1,
+                CustomerType = "1"
+            };
+
+            // Act
+            var result = _validator.TestValidate(command);
+
+            // Assert
+            result.ShouldHaveValidationErrorFor(x => x.PartyName)
+                .WithErrorMessage("Customer Name is required.");
+        }
+
+        [Fact]
+        public void Validate_WithPartyNameExceedingMaxLength_ShouldHaveValidationError()
+        {
+            // Arrange
+            var command = new UpdateCustomerMasterCommand
+            {
+                Id = 1,
+                CompanyId = 1,
+                PartyCode = 1,
+                PartyName = new string('A', 501), // 501 characters
+                AreaCode = 1,
+                CustomerType = "1"
+            };
+
+            // Act
+            var result = _validator.TestValidate(command);
+
+            // Assert
+            result.ShouldHaveValidationErrorFor(x => x.PartyName)
+                .WithErrorMessage("Customer Name cannot exceed 500 characters.");
+        }
+
+        [Theory]
+        [InlineData(0)]
+        [InlineData(-1)]
+        public void Validate_WithInvalidAreaCode_ShouldHaveValidationError(int areaCode)
+        {
+            // Arrange
+            var command = new UpdateCustomerMasterCommand
+            {
+                Id = 1,
+                CompanyId = 1,
+                PartyCode = 1,
+                PartyName = "Test Customer",
+                AreaCode = areaCode,
+                CustomerType = "1"
+            };
+
+            // Act
+            var result = _validator.TestValidate(command);
+
+            // Assert
+            result.ShouldHaveValidationErrorFor(x => x.AreaCode)
+                .WithErrorMessage("Area is required.");
+        }
+
+        [Theory]
+        [InlineData(null)]
+        [InlineData("")]
+        [InlineData("   ")]
+        public void Validate_WithEmptyCustomerType_ShouldHaveValidationError(string customerType)
+        {
+            // Arrange
+            var command = new UpdateCustomerMasterCommand
+            {
+                Id = 1,
+                CompanyId = 1,
+                PartyCode = 1,
+                PartyName = "Test Customer",
+                AreaCode = 1,
+                CustomerType = customerType
+            };
+
+            // Act
+            var result = _validator.TestValidate(command);
+
+            // Assert
+            result.ShouldHaveValidationErrorFor(x => x.CustomerType)
+                .WithErrorMessage("Customer Type is required.");
+        }
+
+        [Theory]
+        [InlineData("invalid-email")]
+        [InlineData("test@")]
+        [InlineData("@test.com")]
+        public void Validate_WithInvalidEmailFormat_ShouldHaveValidationError(string email)
+        {
+            // Arrange
+            var command = new UpdateCustomerMasterCommand
+            {
+                Id = 1,
+                CompanyId = 1,
+                PartyCode = 1,
+                PartyName = "Test Customer",
+                Email = email,
+                AreaCode = 1,
+                CustomerType = "1"
+            };
+
+            // Act
+            var result = _validator.TestValidate(command);
+
+            // Assert
+            result.ShouldHaveValidationErrorFor(x => x.Email)
+                .WithErrorMessage("Email is not in a valid format.");
+        }
+
+        [Fact]
+        public void Validate_WithLbtApplicableButNoLbtNo_ShouldHaveValidationError()
+        {
+            // Arrange
+            var command = new UpdateCustomerMasterCommand
+            {
+                Id = 1,
+                CompanyId = 1,
+                PartyCode = 1,
+                PartyName = "Test Customer",
+                AreaCode = 1,
+                CustomerType = "1",
+                IsLbtApplicable = true,
+                LbtNo = null
+            };
+
+            // Act
+            var result = _validator.TestValidate(command);
+
+            // Assert
+            result.ShouldHaveValidationErrorFor(x => x.LbtNo)
+                .WithErrorMessage("GST No is required when LBT is applicable.");
+        }
+
+        [Fact]
+        public void Validate_WithLbtApplicableAndLbtNo_ShouldNotHaveValidationError()
+        {
+            // Arrange
+            var command = new UpdateCustomerMasterCommand
+            {
+                Id = 1,
+                CompanyId = 1,
+                PartyCode = 1,
+                PartyName = "Test Customer",
+                AreaCode = 1,
+                CustomerType = "1",
+                IsLbtApplicable = true,
+                LbtNo = "GST123456"
+            };
+
+            // Act
+            var result = _validator.TestValidate(command);
+
+            // Assert
+            result.ShouldNotHaveValidationErrorFor(x => x.LbtNo);
         }
     }
 }

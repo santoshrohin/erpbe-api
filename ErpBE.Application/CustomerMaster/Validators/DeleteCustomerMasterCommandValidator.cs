@@ -8,8 +8,8 @@ namespace ErpBE.Application.CustomerMaster.Validators
         public DeleteCustomerMasterCommandValidator()
         {
             RuleFor(x => x.Id)
-                .NotEmpty()
-                .WithMessage("Customer ID is required.");
+                .NotEqual(0)
+                .WithMessage("ID is required.");
 
             RuleFor(x => x.CompanyId)
                 .GreaterThan(0)

@@ -15,6 +15,7 @@ using ErpBE.Application.Auth.Queries.Login;
 using ErpBE.Application.Audit;
 using ErpBE.Application.UserManagement;
 using ErpBE.Application.UnitMaster;
+using ErpBE.Application.CustomerMaster.Interfaces;
 using ErpBE.Application.Interfaces;
 using ErpBE.Domain.Auth;
 using ErpBE.Domain.Common;
@@ -175,6 +176,9 @@ builder.Services.AddScoped<ICustomerTypeMasterRepository, CustomerTypeMasterRepo
 
 // Customer Master services
 builder.Services.AddScoped<ICustomerMasterRepository, CustomerMasterRepository>();
+
+// Tax Invoice services
+builder.Services.AddScoped<ITaxInvoiceRepository, TaxInvoiceRepository>();
 
 // Logs Repository
 builder.Services.AddScoped<ILogsRepository, LogsRepository>();
