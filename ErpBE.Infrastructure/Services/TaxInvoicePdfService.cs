@@ -234,9 +234,9 @@ public class TaxInvoicePdfService : IPdfService
                 table.Cell().Element(CellStyle).Text(item.DescriptionOfGoodsOrServices).FontSize(8);
                 table.Cell().Element(CellStyle).Text(item.HsnSac).FontSize(8);
                 table.Cell().Element(CellStyle).Text(item.Uom).FontSize(8);
-                table.Cell().Element(CellStyle).AlignRight().Text($"{item.Qty:F2}").FontSize(8);
-                table.Cell().Element(CellStyle).AlignRight().Text($"{item.RatePerUnit:F2}").FontSize(8);
-                table.Cell().Element(CellStyle).AlignRight().Text($"{item.TaxableValue:F2}").FontSize(8);
+                table.Cell().Element(CellStyle).AlignRight().Text(FormatIndianNumber(item.Qty)).FontSize(8);
+                table.Cell().Element(CellStyle).AlignRight().Text(FormatIndianNumber(item.RatePerUnit)).FontSize(8);
+                table.Cell().Element(CellStyle).AlignRight().Text(FormatIndianNumber(item.TaxableValue)).FontSize(8);
             }
         });
     }
@@ -268,7 +268,7 @@ public class TaxInvoicePdfService : IPdfService
         column.Item().PaddingTop(3).Border(1).BorderColor("#000000").Row(row =>
         {
             row.RelativeItem().Padding(5).Text(data.Totals.AmountInWords).FontSize(10).Bold();
-            row.ConstantItem(100).Padding(5).AlignRight().Text($"{data.Totals.GrandTotal:F2}").FontSize(12).Bold();
+            row.ConstantItem(100).Padding(5).AlignRight().Text(FormatIndianNumber(data.Totals.GrandTotal)).FontSize(12).Bold();
         });
     }
     
@@ -326,10 +326,10 @@ public class TaxInvoicePdfService : IPdfService
                 row.RelativeItem().Text("");  // Empty space if no E-Invoice
             }
             
-            // Right: Signature
-            row.RelativeItem().AlignRight().Column(signatureColumn =>
+            // Right: Signature - positioned at bottom right
+            row.RelativeItem().AlignRight().AlignBottom().Column(signatureColumn =>
             {
-                signatureColumn.Item().AlignRight().Text("Signature / Digital Signature of").FontSize(9);
+                signatureColumn.Item().PaddingTop(60).AlignRight().Text("Signature / Digital Signature of").FontSize(9);
                 signatureColumn.Item().AlignRight().Text("Authorised Signatory").FontSize(9);
             });
         });
@@ -355,9 +355,49 @@ public class TaxInvoicePdfService : IPdfService
             row.ConstantItem(40).Text(prefix).FontSize(9);
             row.RelativeItem().Text(label).FontSize(9);
             
-            var text = row.ConstantItem(100).AlignRight().Text($"{amount:F2}").FontSize(9);
+            var text = row.ConstantItem(100).AlignRight().Text(FormatIndianNumber(amount)).FontSize(9);
             if (isBold) text.Bold();
         });
+    }
+    
+    /// <summary>
+    /// Formats a number with Indian comma notation (1,00,000.00)
+    /// </summary>
+    private static string FormatIndianNumber(decimal number)
+    {
+        // Format with 2 decimal places
+        string formatted = number.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
+        
+        // Split into integer and decimal parts
+        string[] parts = formatted.Split('.');
+        string integerPart = parts[0];
+        string decimalPart = parts.Length > 1 ? parts[1] : "00";
+        
+        // Add commas for Indian numbering system
+        if (integerPart.Length > 3)
+        {
+            // Last 3 digits
+            string lastThree = integerPart.Substring(integerPart.Length - 3);
+            string remaining = integerPart.Substring(0, integerPart.Length - 3);
+            
+            // Add commas every 2 digits for the remaining part
+            string result = "";
+            int count = 0;
+            for (int i = remaining.Length - 1; i >= 0; i--)
+            {
+                if (count == 2)
+                {
+                    result = "," + result;
+                    count = 0;
+                }
+                result = remaining[i] + result;
+                count++;
+            }
+            
+            return result + "," + lastThree + "." + decimalPart;
+        }
+        
+        return integerPart + "." + decimalPart;
     }
     
     private static IContainer CellStyle(IContainer container)

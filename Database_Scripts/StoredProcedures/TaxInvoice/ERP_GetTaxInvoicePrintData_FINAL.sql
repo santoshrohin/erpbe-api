@@ -99,8 +99,8 @@ BEGIN
     -- ============================================
     SELECT 
         ROW_NUMBER() OVER (ORDER BY ISNULL(IND.IND_SR_NO, 999999), IND.IND_I_CODE) AS SrNo,
-        -- Description format: "26728738 - BRUSH PLATE ASSEMBLY"
-        ISNULL(CAST(IM.I_CODE AS NVARCHAR(50)), '') + ' - ' + ISNULL(IM.I_NAME, '') AS DescriptionOfGoodsOrServices,
+        -- Description format: "26728738 - BRUSH PLATE ASSEMBLY" (using I_CODENO, not I_CODE which is PK)
+        ISNULL(IM.I_CODENO, '') + ' - ' + ISNULL(IM.I_NAME, '') AS DescriptionOfGoodsOrServices,
         ISNULL(IND.IND_HSN_CODE, '') AS HsnSac,
         ISNULL(UM.I_UOM_NAME, 'NOS') AS Uom,
         ISNULL(IND.IND_INQTY, 0) AS Qty,
