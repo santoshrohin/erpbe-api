@@ -1,6 +1,8 @@
+using ErpBE.Application.DTOs;
 using ErpBE.Application.DTOs.TaxInvoice;
 using ErpBE.Application.TaxInvoice.Commands;
 using ErpBE.Application.TaxInvoice.Queries;
+using ErpBE.Application.Interfaces;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -13,11 +15,13 @@ namespace ErpBE.API.Controllers.Sales
     public class TaxInvoiceController : ControllerBase
     {
         private readonly IMediator _mediator;
+        private readonly IPdfService _pdfService;
         private readonly ILogger<TaxInvoiceController> _logger;
 
-        public TaxInvoiceController(IMediator mediator, ILogger<TaxInvoiceController> logger)
+        public TaxInvoiceController(IMediator mediator, IPdfService pdfService, ILogger<TaxInvoiceController> logger)
         {
             _mediator = mediator;
+            _pdfService = pdfService;
             _logger = logger;
         }
 
@@ -466,6 +470,123 @@ namespace ErpBE.API.Controllers.Sales
         }
 
         #endregion
+
+        #region Print Tax Invoice
+
+        /// <summary>
+        /// Print Tax Invoice as PDF (Single)
+        /// </summary>
+        /// <param name="invoiceCode">Invoice Code</param>
+        /// <param name="companyId">Company ID</param>
+        /// <param name="copyType">Copy Type (1=Original, 2=Duplicate, 3=Triplicate, 4=ExtraCopy)</param>
+        /// <returns>PDF file</returns>
+        [HttpGet("{invoiceCode}/print")]
+        public async Task<IActionResult> PrintTaxInvoice(
+            int invoiceCode,
+            [FromQuery] int companyId,
+            [FromQuery] InvoiceCopyType copyType = InvoiceCopyType.Original)
+        {
+            _logger.LogInformation("GET /api/TaxInvoice/{InvoiceCode}/print - Printing Invoice: {InvoiceCode}, Company: {CompanyId}, CopyType: {CopyType}",
+                invoiceCode, invoiceCode, companyId, copyType);
+
+            try
+            {
+                // Get print data
+                var query = new GetTaxInvoicePrintDataQuery
+                {
+                    InvoiceCode = invoiceCode,
+                    CompanyId = companyId,
+                    CopyType = copyType
+                };
+
+                var printData = await _mediator.Send(query);
+
+                if (printData == null)
+                {
+                    return NotFound(new { message = $"Tax Invoice with code '{invoiceCode}' not found." });
+                }
+
+                // Generate PDF
+                var pdfBytes = _pdfService.GenerateTaxInvoicePdf(printData);
+
+                // Return PDF file
+                return File(pdfBytes, "application/pdf", $"TaxInvoice_{printData.InvoiceHeader.InvoiceSerialNo}_{copyType}.pdf");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error printing Tax Invoice {InvoiceCode}", invoiceCode);
+                return StatusCode(500, new { message = "An error occurred while generating the PDF.", error = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Print Multiple Tax Invoices as a single PDF
+        /// </summary>
+        /// <param name="request">Print request with invoice codes and copy types</param>
+        /// <returns>Merged PDF file</returns>
+        [HttpPost("print-batch")]
+        public async Task<IActionResult> PrintBatchTaxInvoices([FromBody] BatchPrintRequest request)
+        {
+            _logger.LogInformation("POST /api/TaxInvoice/print-batch - Printing {Count} invoices", request.Invoices.Count);
+
+            try
+            {
+                var printDataList = new List<TaxInvoicePrintDto>();
+
+                foreach (var invoiceRequest in request.Invoices)
+                {
+                    var query = new GetTaxInvoicePrintDataQuery
+                    {
+                        InvoiceCode = invoiceRequest.InvoiceCode,
+                        CompanyId = request.CompanyId,
+                        CopyType = invoiceRequest.CopyType
+                    };
+
+                    var printData = await _mediator.Send(query);
+                    
+                    if (printData != null)
+                    {
+                        printDataList.Add(printData);
+                    }
+                }
+
+                if (printDataList.Count == 0)
+                {
+                    return NotFound(new { message = "No valid invoices found for printing." });
+                }
+
+                // Generate merged PDF
+                var pdfBytes = _pdfService.GenerateBatchTaxInvoicePdf(printDataList);
+
+                // Return PDF file
+                return File(pdfBytes, "application/pdf", $"TaxInvoices_Batch_{DateTime.Now:yyyyMMdd_HHmmss}.pdf");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error printing batch Tax Invoices");
+                return StatusCode(500, new { message = "An error occurred while generating the batch PDF.", error = ex.Message });
+            }
+        }
+
+        #endregion
     }
+}
+
+/// <summary>
+/// Request model for batch printing
+/// </summary>
+public class BatchPrintRequest
+{
+    public int CompanyId { get; set; }
+    public List<InvoicePrintRequest> Invoices { get; set; } = new();
+}
+
+/// <summary>
+/// Single invoice print request
+/// </summary>
+public class InvoicePrintRequest
+{
+    public int InvoiceCode { get; set; }
+    public InvoiceCopyType CopyType { get; set; } = InvoiceCopyType.Original;
 }
 

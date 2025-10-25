@@ -3,6 +3,7 @@ using ErpBE.Application.DTOs;
 using ErpBE.Application.DTOs.TaxInvoice;
 using ErpBE.Application.TaxInvoice.Queries;
 using ErpBE.Application.Interfaces;
+using ErpBE.Infrastructure.Services;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -641,6 +642,83 @@ namespace ErpBE.Infrastructure.Repositories
                 commandType: CommandType.StoredProcedure);
 
             return parameters.Get<int>("@NewInvoiceNumber");
+        }
+
+        public async Task<TaxInvoicePrintDto?> GetPrintDataAsync(int invoiceCode, int companyId)
+        {
+            using var connection = new SqlConnection(_connectionString);
+            
+            var parameters = new DynamicParameters();
+            parameters.Add("@InvoiceCode", invoiceCode);
+            parameters.Add("@CompanyId", companyId);
+
+            using var multi = await connection.QueryMultipleAsync(
+                "ERP_GetTaxInvoicePrintData_V2",  // Updated to V2
+                parameters, 
+                commandType: CommandType.StoredProcedure);
+
+            // Read all 8 result sets in order
+            // Using FirstOrDefaultAsync instead of ReadSingleOrDefaultAsync to handle cases where SP might return multiple rows
+            // 1. Company Information
+            var company = await multi.ReadFirstOrDefaultAsync<CompanyPrintInfo>();
+            
+            // 2. Invoice Header
+            var invoiceHeader = await multi.ReadFirstOrDefaultAsync<InvoiceHeaderPrintInfo>();
+            
+            // 3. Recipient Details
+            var recipient = await multi.ReadFirstOrDefaultAsync<RecipientPrintInfo>();
+            
+            // 4. Delivery Details
+            var delivery = await multi.ReadFirstOrDefaultAsync<DeliveryPrintInfo>();
+            
+            // 5. Line Items
+            var lineItems = (await multi.ReadAsync<InvoiceDetailPrintInfo>()).ToList();
+            
+            // 6. Totals and Tax Summary
+            var totals = await multi.ReadFirstOrDefaultAsync<TotalsPrintInfo>();
+            
+            // 7. E-Invoice Information
+            var eInvoice = await multi.ReadFirstOrDefaultAsync<EInvoicePrintInfo>();
+            
+            // 8. Terms and Conditions
+            var terms = (await multi.ReadAsync<TermConditionItem>()).Select(t => t.TermCondition).ToList();
+
+            // Return null if essential data not found
+            if (company == null || invoiceHeader == null || recipient == null)
+            {
+                return null;
+            }
+
+            // Convert amount to words using NumberToWordsConverter
+            if (totals != null)
+            {
+                totals.AmountInWords = NumberToWordsConverter.ConvertToWords((double)totals.GrandTotal);
+            }
+
+            return new TaxInvoicePrintDto
+            {
+                Company = company,
+                InvoiceHeader = invoiceHeader,
+                Recipient = recipient,
+                Delivery = delivery ?? new DeliveryPrintInfo  // Fallback to empty if null, copy from recipient later
+                {
+                    Name = recipient.Name,
+                    Address = recipient.Address,
+                    StateName = recipient.StateName,
+                    StateCode = recipient.StateCode,
+                    GstinNo = recipient.GstinNo
+                },
+                LineItems = lineItems,
+                Totals = totals ?? new TotalsPrintInfo(),
+                EInvoice = eInvoice,
+                TermsAndConditions = terms
+            };
+        }
+        
+        // Helper class for reading terms
+        private class TermConditionItem
+        {
+            public string TermCondition { get; set; } = string.Empty;
         }
     }
 }

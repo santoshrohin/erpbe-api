@@ -62,6 +62,11 @@ namespace ErpBE.Application.Interfaces
         /// Generates next Invoice Number for a company
         /// </summary>
         Task<int> GenerateInvoiceNumberAsync(int companyCode);
+        
+        /// <summary>
+        /// Gets comprehensive Tax Invoice data for printing (includes company, customer, items, taxes, e-invoice)
+        /// </summary>
+        Task<TaxInvoicePrintDto?> GetPrintDataAsync(int invoiceCode, int companyId);
     }
 }
 

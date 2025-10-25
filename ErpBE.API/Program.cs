@@ -22,6 +22,7 @@ using ErpBE.Domain.Common;
 using ErpBE.Infrastructure.Auth;
 using ErpBE.Infrastructure.Common;
 using ErpBE.Infrastructure.Repositories;
+using ErpBE.Infrastructure.Services;
 using ErpBE.API.Middleware;
 using ErpBE.API.Common;
 using Microsoft.AspNetCore.Components.WebAssembly.Server;
@@ -179,6 +180,10 @@ builder.Services.AddScoped<ICustomerMasterRepository, CustomerMasterRepository>(
 
 // Tax Invoice services
 builder.Services.AddScoped<ITaxInvoiceRepository, TaxInvoiceRepository>();
+builder.Services.AddScoped<IPdfService, TaxInvoicePdfService>();
+
+// Customer PO services
+builder.Services.AddScoped<ICustomerPoRepository, CustomerPoRepository>();
 
 // Logs Repository
 builder.Services.AddScoped<ILogsRepository, LogsRepository>();
