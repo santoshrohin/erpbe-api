@@ -156,7 +156,8 @@ public class EInvoicePrintInfo
 /// </summary>
 public enum InvoiceCopyType
 {
-    Original = 0,
-    Duplicate = 1,
-    Triplicate = 2
+    Original = 0,        // 1 copy: Original
+    Duplicate = 1,       // 2 copies: Original, Duplicate
+    Triplicate = 2,      // 3 copies: Original, Duplicate, Triplicate
+    Quadruplicate = 3    // 4 copies: Original, Duplicate, Triplicate, Quadruplicate
 }

@@ -21,43 +21,50 @@ public class TaxInvoicePdfService : IPdfService
 
     public byte[] GenerateTaxInvoicePdf(TaxInvoicePrintDto data)
     {
+        // Determine how many copies to generate based on copyType
+        var copyTypes = GetCopyTypesForGeneration(data.CopyType);
+        
         var document = Document.Create(container =>
         {
-            container.Page(page =>
+            // Generate a separate page for each copy type
+            foreach (var copyType in copyTypes)
             {
-                page.Size(PageSizes.A4);
-                page.Margin(10);
-                
-                page.Content().Column(column =>
+                container.Page(page =>
                 {
-                    // Main invoice content with double border
-                    column.Item().Border(2).BorderColor("#000000").Padding(2)
-                        .Border(1).BorderColor("#000000").Padding(5)
-                        .Column(innerColumn =>
-                        {
-                            // 1. Header Section
-                            ComposeHeader(innerColumn, data);
-                            
-                            // 2. Invoice Header (Two columns)
-                            ComposeInvoiceHeader(innerColumn, data);
-                            
-                            // 3. Recipient and Delivery (Two columns)
-                            ComposeRecipientDelivery(innerColumn, data);
-                            
-                            // 4. Line Items Table
-                            ComposeLineItems(innerColumn, data);
-                            
-                            // 5. Totals Section
-                            ComposeTotals(innerColumn, data);
-                            
-                            // 6. Declaration and Terms
-                            ComposeDeclarationAndTerms(innerColumn, data);
-                            
-                            // 7. E-Invoice and Signature
-                            ComposeEInvoiceAndSignature(innerColumn, data);
-                        });
+                    page.Size(PageSizes.A4);
+                    page.Margin(10);
+                    
+                    page.Content().Column(column =>
+                    {
+                        // Main invoice content with double border
+                        column.Item().Border(2).BorderColor("#000000").Padding(2)
+                            .Border(1).BorderColor("#000000").Padding(5)
+                            .Column(innerColumn =>
+                            {
+                                // 1. Header Section (with current copy type label)
+                                ComposeHeader(innerColumn, data, copyType);
+                                
+                                // 2. Invoice Header (Two columns)
+                                ComposeInvoiceHeader(innerColumn, data);
+                                
+                                // 3. Recipient and Delivery (Two columns)
+                                ComposeRecipientDelivery(innerColumn, data);
+                                
+                                // 4. Line Items Table
+                                ComposeLineItems(innerColumn, data);
+                                
+                                // 5. Totals Section
+                                ComposeTotals(innerColumn, data);
+                                
+                                // 6. Declaration and Terms
+                                ComposeDeclarationAndTerms(innerColumn, data);
+                                
+                                // 7. E-Invoice and Signature
+                                ComposeEInvoiceAndSignature(innerColumn, data);
+                            });
+                    });
                 });
-            });
+            }
         });
 
         return document.GeneratePdf();
@@ -69,27 +76,33 @@ public class TaxInvoicePdfService : IPdfService
         {
             foreach (var invoice in invoices)
             {
-                container.Page(page =>
+                // Get the copies for each invoice based on its copyType
+                var copyTypes = GetCopyTypesForGeneration(invoice.CopyType);
+                
+                foreach (var copyType in copyTypes)
                 {
-                    page.Size(PageSizes.A4);
-                    page.Margin(10);
-                    
-                    page.Content().Column(column =>
+                    container.Page(page =>
                     {
-                        column.Item().Border(2).BorderColor("#000000").Padding(2)
-                            .Border(1).BorderColor("#000000").Padding(5)
-                            .Column(innerColumn =>
-                            {
-                                ComposeHeader(innerColumn, invoice);
-                                ComposeInvoiceHeader(innerColumn, invoice);
-                                ComposeRecipientDelivery(innerColumn, invoice);
-                                ComposeLineItems(innerColumn, invoice);
-                                ComposeTotals(innerColumn, invoice);
-                                ComposeDeclarationAndTerms(innerColumn, invoice);
-                                ComposeEInvoiceAndSignature(innerColumn, invoice);
-                            });
+                        page.Size(PageSizes.A4);
+                        page.Margin(10);
+                        
+                        page.Content().Column(column =>
+                        {
+                            column.Item().Border(2).BorderColor("#000000").Padding(2)
+                                .Border(1).BorderColor("#000000").Padding(5)
+                                .Column(innerColumn =>
+                                {
+                                    ComposeHeader(innerColumn, invoice, copyType);
+                                    ComposeInvoiceHeader(innerColumn, invoice);
+                                    ComposeRecipientDelivery(innerColumn, invoice);
+                                    ComposeLineItems(innerColumn, invoice);
+                                    ComposeTotals(innerColumn, invoice);
+                                    ComposeDeclarationAndTerms(innerColumn, invoice);
+                                    ComposeEInvoiceAndSignature(innerColumn, invoice);
+                                });
+                        });
                     });
-                });
+                }
             }
         });
 
@@ -98,7 +111,7 @@ public class TaxInvoicePdfService : IPdfService
 
     #region Header Section
     
-    private void ComposeHeader(ColumnDescriptor column, TaxInvoicePrintDto data)
+    private void ComposeHeader(ColumnDescriptor column, TaxInvoicePrintDto data, InvoiceCopyType currentCopyType)
     {
         column.Item().Column(headerColumn =>
         {
@@ -106,7 +119,7 @@ public class TaxInvoicePdfService : IPdfService
             headerColumn.Item().Row(row =>
             {
                 row.RelativeItem().Text("Tax Invoice").Bold().FontSize(16).AlignCenter();
-                row.ConstantItem(80).Text(GetCopyTypeName(data.CopyType)).FontSize(10).AlignRight();
+                row.ConstantItem(80).Text(GetCopyTypeName(currentCopyType)).FontSize(10).AlignRight();
             });
             
             // Legal text
@@ -405,6 +418,43 @@ public class TaxInvoicePdfService : IPdfService
         return container.Border(0.5f).BorderColor("#E0E0E0").Padding(3);
     }
     
+    /// <summary>
+    /// Get the list of copy types to generate based on the requested copy type
+    /// Original (0) = 1 copy: Original
+    /// Duplicate (1) = 2 copies: Original, Duplicate
+    /// Triplicate (2) = 3 copies: Original, Duplicate, Triplicate
+    /// Quadruplicate (3) = 4 copies: Original, Duplicate, Triplicate, Quadruplicate
+    /// </summary>
+    private static List<InvoiceCopyType> GetCopyTypesForGeneration(InvoiceCopyType copyType)
+    {
+        return copyType switch
+        {
+            InvoiceCopyType.Original => new List<InvoiceCopyType> 
+            { 
+                InvoiceCopyType.Original 
+            },
+            InvoiceCopyType.Duplicate => new List<InvoiceCopyType> 
+            { 
+                InvoiceCopyType.Original, 
+                InvoiceCopyType.Duplicate 
+            },
+            InvoiceCopyType.Triplicate => new List<InvoiceCopyType> 
+            { 
+                InvoiceCopyType.Original, 
+                InvoiceCopyType.Duplicate, 
+                InvoiceCopyType.Triplicate 
+            },
+            InvoiceCopyType.Quadruplicate => new List<InvoiceCopyType> 
+            { 
+                InvoiceCopyType.Original, 
+                InvoiceCopyType.Duplicate, 
+                InvoiceCopyType.Triplicate, 
+                InvoiceCopyType.Quadruplicate 
+            },
+            _ => new List<InvoiceCopyType> { InvoiceCopyType.Original }
+        };
+    }
+    
     private static string GetCopyTypeName(InvoiceCopyType copyType)
     {
         return copyType switch
@@ -412,6 +462,7 @@ public class TaxInvoicePdfService : IPdfService
             InvoiceCopyType.Original => "Original",
             InvoiceCopyType.Duplicate => "Duplicate",
             InvoiceCopyType.Triplicate => "Triplicate",
+            InvoiceCopyType.Quadruplicate => "Quadruplicate",
             _ => "Copy"
         };
     }
