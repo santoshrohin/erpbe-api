@@ -8,7 +8,7 @@ namespace ErpBE.Application.TaxInvoice.Validators
         public GetAllTaxInvoicesQueryValidator()
         {
             RuleFor(x => x.CompanyId)
-                .GreaterThan(0)
+                .NotEqual(0)
                 .WithMessage("Company ID is required.");
             
             RuleFor(x => x.PageNumber)

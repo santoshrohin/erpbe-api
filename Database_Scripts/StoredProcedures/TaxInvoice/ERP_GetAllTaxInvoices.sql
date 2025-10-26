@@ -22,7 +22,7 @@ CREATE PROCEDURE [dbo].[ERP_GetAllTaxInvoices]
     @TotalCount INT OUTPUT
 AS
 BEGIN
-    SET NOCOUNT OFF;
+    SET NOCOUNT ON;
 
     DECLARE @Offset INT = (@PageNumber - 1) * @PageSize;
 

@@ -4,6 +4,7 @@ using ErpBE.Application.DTOs.TaxInvoice;
 using ErpBE.Application.TaxInvoice.Queries;
 using ErpBE.Application.Interfaces;
 using ErpBE.Infrastructure.Services;
+using ErpBE.Infrastructure.DTOs;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -713,12 +714,6 @@ namespace ErpBE.Infrastructure.Repositories
                 EInvoice = eInvoice,
                 TermsAndConditions = terms
             };
-        }
-        
-        // Helper class for reading terms
-        private class TermConditionItem
-        {
-            public string TermCondition { get; set; } = string.Empty;
         }
     }
 }

@@ -8,7 +8,7 @@ ALTER PROCEDURE [dbo].[ERP_DeleteTaxInvoice]
     @CompanyCode INT
 AS
 BEGIN
-    SET NOCOUNT OFF;
+    SET NOCOUNT ON;
 
     BEGIN TRY
         -- Reverse stock (delete all stock ledger entries for this invoice)

@@ -30,7 +30,7 @@ public class CreateCustomerPoCommandValidator : AbstractValidator<CreateCustomer
             .WithMessage("PO Date is required.");
 
         RuleFor(x => x.CompanyId)
-            .GreaterThan(0)
+            .NotEqual(0)
             .WithMessage("Company ID is required.");
 
         RuleFor(x => x.ProjectCode)

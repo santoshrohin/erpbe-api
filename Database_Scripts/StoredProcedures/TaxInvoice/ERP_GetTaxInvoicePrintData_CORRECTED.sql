@@ -3,7 +3,7 @@ CREATE OR ALTER PROCEDURE [dbo].[ERP_GetTaxInvoicePrintData]
     @CompanyId INT
 AS
 BEGIN
-    SET NOCOUNT OFF;
+    SET NOCOUNT ON;
 
     BEGIN TRY
         -- =========================================================================

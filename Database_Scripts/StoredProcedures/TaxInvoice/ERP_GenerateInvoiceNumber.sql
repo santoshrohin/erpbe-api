@@ -8,7 +8,7 @@ CREATE PROCEDURE [dbo].[ERP_GenerateInvoiceNumber]
     @NewInvoiceNumber INT OUTPUT
 AS
 BEGIN
-    SET NOCOUNT OFF;
+    SET NOCOUNT ON;
 
     BEGIN TRY
         -- Get the max invoice number for this company and increment

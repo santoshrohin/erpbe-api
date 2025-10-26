@@ -2,7 +2,7 @@ CREATE PROCEDURE [dbo].[ERP_CheckCustomerPoLock]
     @PoCode INT
 AS
 BEGIN
-    SET NOCOUNT OFF;
+    SET NOCOUNT ON;
 
     BEGIN TRY
         SELECT ISNULL(MODIFY, 0) AS IsLocked

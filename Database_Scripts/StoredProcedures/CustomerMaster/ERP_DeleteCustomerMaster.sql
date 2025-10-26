@@ -6,7 +6,7 @@ CREATE OR ALTER PROCEDURE [dbo].[ERP_DeleteCustomerMaster]
     @CompanyId INT
 AS
 BEGIN
-    SET NOCOUNT OFF;
+    SET NOCOUNT ON;
     
     BEGIN TRY
         BEGIN TRANSACTION;

@@ -12,7 +12,7 @@ namespace ErpBE.Application.TaxInvoice.Validators
         {
             // A. Form-Level Validations
             RuleFor(x => x.CompanyCode)
-                .GreaterThan(0)
+                .NotEqual(0)
                 .WithMessage("Company is required.");
             
             RuleFor(x => x.InvoiceDate)

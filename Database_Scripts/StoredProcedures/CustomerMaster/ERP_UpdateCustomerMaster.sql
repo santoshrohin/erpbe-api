@@ -38,7 +38,7 @@ CREATE OR ALTER PROCEDURE [dbo].[ERP_UpdateCustomerMaster]
     @IsLbtApplicable BIT = 0
 AS
 BEGIN
-    SET NOCOUNT OFF;
+    SET NOCOUNT ON;
     
     BEGIN TRY
         BEGIN TRANSACTION;

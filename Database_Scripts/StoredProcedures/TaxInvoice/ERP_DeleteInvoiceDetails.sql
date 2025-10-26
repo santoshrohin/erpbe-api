@@ -7,7 +7,7 @@ CREATE PROCEDURE [dbo].[ERP_DeleteInvoiceDetails]
     @InvoiceCode INT
 AS
 BEGIN
-    SET NOCOUNT OFF;
+    SET NOCOUNT ON;
 
     BEGIN TRY
         DELETE FROM INVOICE_DETAIL 

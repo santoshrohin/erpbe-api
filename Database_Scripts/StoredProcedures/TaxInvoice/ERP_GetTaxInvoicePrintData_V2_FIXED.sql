@@ -7,7 +7,7 @@ CREATE OR ALTER PROCEDURE [dbo].[ERP_GetTaxInvoicePrintData_V2]
     @CompanyId INT
 AS
 BEGIN
-    SET NOCOUNT OFF;
+    SET NOCOUNT ON;
     
     -- Declare variables
     DECLARE @CustomerCode INT;

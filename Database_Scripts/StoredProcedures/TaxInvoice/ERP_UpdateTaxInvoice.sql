@@ -151,7 +151,7 @@ ALTER PROCEDURE [dbo].[ERP_UpdateTaxInvoice]
     @AddressSelected INT = NULL
 AS
 BEGIN
-    SET NOCOUNT OFF;
+    SET NOCOUNT ON;
 
     BEGIN TRY
         -- Reverse old stock entries (delete all stock ledger entries for this invoice)

@@ -11,7 +11,7 @@ CREATE OR ALTER PROCEDURE [dbo].[ERP_GetCustomerTypeMasters]
     @TotalCount INT OUTPUT
 AS
 BEGIN
-    SET NOCOUNT OFF;
+    SET NOCOUNT ON;
 
     DECLARE @Offset INT = (@PageNumber - 1) * @PageSize;
 

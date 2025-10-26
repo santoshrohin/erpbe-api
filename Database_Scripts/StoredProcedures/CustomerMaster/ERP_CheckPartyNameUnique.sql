@@ -8,7 +8,7 @@ CREATE OR ALTER PROCEDURE [dbo].[ERP_CheckPartyNameUnique]
     @IsUnique BIT OUTPUT
 AS
 BEGIN
-    SET NOCOUNT OFF;
+    SET NOCOUNT ON;
     
     IF EXISTS (
         SELECT 1 

@@ -8,7 +8,7 @@ CREATE OR ALTER PROCEDURE [dbo].[ERP_GetTaxInvoicePrintData_V2]
     @CompanyId INT
 AS
 BEGIN
-    SET NOCOUNT OFF;
+    SET NOCOUNT ON;
     
     -- Declare variables
     DECLARE @CustomerCode INT;
@@ -47,12 +47,17 @@ BEGIN
         -- Right Column
         ISNULL(INM.INM_TRANSPORT, '') AS TransporatationMode,  -- Note: keeping typo from actual invoice
         ISNULL(INM.INM_VEH_NO, '') AS VehicleNo,
-        ISNULL(CPO.CPOM_PONO, '') AS PoNo,
+        -- Get PO from first line item (PO is linked at line item level, not invoice header)
+        ISNULL((SELECT TOP 1 CPO.CPOM_PONO 
+                FROM INVOICE_DETAIL IND
+                INNER JOIN CUSTPO_MASTER CPO ON CPO.CPOM_CODE = IND.IND_CPOM_CODE
+                WHERE IND.IND_INM_CODE = INM.INM_CODE 
+                AND ISNULL(IND.ES_DELETE, 0) = 0
+                AND ISNULL(CPO.ES_DELETE, 0) = 0), '') AS PoNo,
         INM.INM_DATE AS DateAndTimeOfSupply,  -- Date with time
         ISNULL(CM_STATE.SM_NAME, 'Maharashtra') AS PlaceOfSupply
     FROM INVOICE_MASTER INM
     INNER JOIN COMPANY_MASTER CM ON CM.CM_CODE = INM.INM_CM_CODE AND CM.CM_ID = @CompanyId
-    LEFT JOIN CUSTPO_MASTER CPO ON CPO.CPOM_CODE = INM.INM_CPOM_CODE AND ISNULL(CPO.ES_DELETE, 0) = 0
     LEFT JOIN STATE_MASTER CM_STATE ON CM_STATE.SM_CODE = CM.CM_STATE AND ISNULL(CM_STATE.ES_DELETE, 0) = 0
     WHERE INM.INM_CODE = @InvoiceCode 
     AND ISNULL(INM.ES_DELETE, 0) = 0
@@ -61,6 +66,7 @@ BEGIN
     -- ============================================
     -- Result Set 3: Recipient Details (Left side)
     -- "Details Of Recipient"
+    -- Uses ReciptGSTIn from INVOICE_MASTER (not from PARTY_MASTER)
     -- ============================================
     SELECT 
         ISNULL(PM.P_NAME, '') AS Name,
@@ -68,30 +74,35 @@ BEGIN
         ISNULL(PM.P_ADD1, '') + 
         CASE WHEN ISNULL(PM.P_CITY, '') <> '' THEN ',Dist-' + PM.P_CITY ELSE '' END +
         CASE WHEN ISNULL(PM.P_PIN_CODE, '') <> '' THEN '-' + PM.P_PIN_CODE ELSE '' END AS Address,
+        -- State derived from ReciptGSTIn (first 2 digits)
         ISNULL(SM.SM_NAME, '') AS StateName,
         ISNULL(SM.SM_STATE_CODE, '') AS StateCode,  -- e.g., "27"
-        ISNULL(PM.P_GST_NO, '') AS GstinNo
-    FROM PARTY_MASTER PM
-    LEFT JOIN STATE_MASTER SM ON SM.SM_CODE = PM.P_STM_CODE AND ISNULL(SM.ES_DELETE, 0) = 0
-    WHERE PM.P_CODE = @CustomerCode
-    AND ISNULL(PM.ES_DELETE, 0) = 0;
+        ISNULL(INM.ReciptGSTIn, '') AS GstinNo  -- From INVOICE_MASTER, not PARTY_MASTER
+    FROM INVOICE_MASTER INM
+    INNER JOIN PARTY_MASTER PM ON PM.P_CODE = INM.INM_P_CODE AND ISNULL(PM.ES_DELETE, 0) = 0
+    LEFT JOIN STATE_MASTER SM ON SM.SM_CODE = TRY_CAST(LEFT(INM.ReciptGSTIn, 2) AS INT) AND ISNULL(SM.ES_DELETE, 0) = 0
+    WHERE INM.INM_CODE = @InvoiceCode
+    AND ISNULL(INM.ES_DELETE, 0) = 0;
     
     -- ============================================
     -- Result Set 4: Delivery Details (Right side)
     -- "Details Of Delivery" - Usually same as recipient
+    -- Uses ReciptGSTIn from INVOICE_MASTER (not from PARTY_MASTER)
     -- ============================================
     SELECT 
         ISNULL(PM.P_NAME, '') AS Name,
         ISNULL(PM.P_ADD1, '') + 
         CASE WHEN ISNULL(PM.P_CITY, '') <> '' THEN ',Dist-' + PM.P_CITY ELSE '' END +
         CASE WHEN ISNULL(PM.P_PIN_CODE, '') <> '' THEN '-' + PM.P_PIN_CODE ELSE '' END AS Address,
+        -- State derived from ReciptGSTIn (first 2 digits)
         ISNULL(SM.SM_NAME, '') AS StateName,
         ISNULL(SM.SM_STATE_CODE, '') AS StateCode,
-        ISNULL(PM.P_GST_NO, '') AS GstinNo
-    FROM PARTY_MASTER PM
-    LEFT JOIN STATE_MASTER SM ON SM.SM_CODE = PM.P_STM_CODE AND ISNULL(SM.ES_DELETE, 0) = 0
-    WHERE PM.P_CODE = @CustomerCode
-    AND ISNULL(PM.ES_DELETE, 0) = 0;
+        ISNULL(INM.ReciptGSTIn, '') AS GstinNo  -- From INVOICE_MASTER, not PARTY_MASTER
+    FROM INVOICE_MASTER INM
+    INNER JOIN PARTY_MASTER PM ON PM.P_CODE = INM.INM_P_CODE AND ISNULL(PM.ES_DELETE, 0) = 0
+    LEFT JOIN STATE_MASTER SM ON SM.SM_CODE = TRY_CAST(LEFT(INM.ReciptGSTIn, 2) AS INT) AND ISNULL(SM.ES_DELETE, 0) = 0
+    WHERE INM.INM_CODE = @InvoiceCode
+    AND ISNULL(INM.ES_DELETE, 0) = 0;
     
     -- ============================================
     -- Result Set 5: Line Items

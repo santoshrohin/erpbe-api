@@ -5,7 +5,7 @@ CREATE OR ALTER PROCEDURE [dbo].[ERP_IsTypeCodeUnique]
     @IsUnique BIT OUTPUT
 AS
 BEGIN
-    SET NOCOUNT OFF;
+    SET NOCOUNT ON;
 
     DECLARE @Count INT;
 

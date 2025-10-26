@@ -3,7 +3,7 @@ CREATE PROCEDURE [dbo].[ERP_DeleteCustomerPo]
     @CompanyId INT
 AS
 BEGIN
-    SET NOCOUNT OFF;
+    SET NOCOUNT ON;
 
     BEGIN TRY
         -- Soft delete master (details don't have ES_DELETE flag, just orphaned)

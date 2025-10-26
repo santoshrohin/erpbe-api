@@ -10,7 +10,7 @@ CREATE PROCEDURE [dbo].[ERP_GetItemStock]
     @AvailableQuantity FLOAT OUTPUT
 AS
 BEGIN
-    SET NOCOUNT OFF;
+    SET NOCOUNT ON;
 
     BEGIN TRY
         -- Sum all stock movements for this item

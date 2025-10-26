@@ -12,8 +12,8 @@ namespace ErpBE.Application.TaxInvoice.Validators
                 .WithMessage("Invoice Code is required.");
             
             RuleFor(x => x.CompanyCode)
-                .GreaterThan(0)
-                .WithMessage("Company Code must be greater than 0.");
+                .NotEqual(0)
+                .WithMessage("Company Code is required.");
         }
     }
 }

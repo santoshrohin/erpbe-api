@@ -41,7 +41,7 @@ CREATE PROCEDURE [dbo].[ERP_UpdateCustomerPo]
     @ProjectName VARCHAR(100) = NULL
 AS
 BEGIN
-    SET NOCOUNT OFF;
+    SET NOCOUNT ON;
 
     BEGIN TRY
         -- Update master record

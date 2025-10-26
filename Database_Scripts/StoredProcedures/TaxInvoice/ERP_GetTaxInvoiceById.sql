@@ -8,7 +8,7 @@ CREATE PROCEDURE [dbo].[ERP_GetTaxInvoiceById]
     @CompanyCode INT
 AS
 BEGIN
-    SET NOCOUNT OFF;
+    SET NOCOUNT ON;
 
     -- Return Invoice Master
     SELECT 

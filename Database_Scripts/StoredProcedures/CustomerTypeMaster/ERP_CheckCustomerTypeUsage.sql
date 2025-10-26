@@ -3,7 +3,7 @@ CREATE OR ALTER PROCEDURE [dbo].[ERP_CheckCustomerTypeUsage]
     @IsUsed BIT OUTPUT
 AS
 BEGIN
-    SET NOCOUNT OFF;
+    SET NOCOUNT ON;
 
     DECLARE @Count INT;
 

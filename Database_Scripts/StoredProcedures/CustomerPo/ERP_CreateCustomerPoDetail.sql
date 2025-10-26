@@ -22,7 +22,7 @@ CREATE PROCEDURE [dbo].[ERP_CreateCustomerPoDetail]
     @DiscountAmount FLOAT = NULL
 AS
 BEGIN
-    SET NOCOUNT OFF;
+    SET NOCOUNT ON;
 
     BEGIN TRY
         INSERT INTO CUSTPO_DETAIL (

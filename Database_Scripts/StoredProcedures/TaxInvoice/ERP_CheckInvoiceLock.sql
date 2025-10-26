@@ -8,7 +8,7 @@ CREATE PROCEDURE [dbo].[ERP_CheckInvoiceLock]
     @IsLocked BIT OUTPUT
 AS
 BEGIN
-    SET NOCOUNT OFF;
+    SET NOCOUNT ON;
 
     BEGIN TRY
         SELECT @IsLocked = ISNULL(MODIFY, 0) 

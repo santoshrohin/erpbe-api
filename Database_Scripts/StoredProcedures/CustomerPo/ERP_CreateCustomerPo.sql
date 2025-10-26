@@ -40,7 +40,7 @@ CREATE PROCEDURE [dbo].[ERP_CreateCustomerPo]
     @ProjectName VARCHAR(100) = NULL
 AS
 BEGIN
-    SET NOCOUNT OFF;
+    SET NOCOUNT ON;
 
     BEGIN TRY
         DECLARE @NewPoCode INT;

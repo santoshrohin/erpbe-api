@@ -8,7 +8,7 @@ namespace ErpBE.API.Controllers.Admin
 {
     [ApiController]
     [Route("api/[controller]")]
-    [AuthorizeAdmin] // Only Admin can view audit trails
+    [AuthorizeAdmin] // Only Admin can view audit trails (user must have Admin role)
     public class AuditController : ControllerBase
     {
         private readonly IMediator _mediator;

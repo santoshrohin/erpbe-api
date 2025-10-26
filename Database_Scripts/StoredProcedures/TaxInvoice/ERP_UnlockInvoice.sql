@@ -7,7 +7,7 @@ CREATE PROCEDURE [dbo].[ERP_UnlockInvoice]
     @InvoiceCode INT
 AS
 BEGIN
-    SET NOCOUNT OFF;
+    SET NOCOUNT ON;
 
     BEGIN TRY
         UPDATE INVOICE_MASTER 

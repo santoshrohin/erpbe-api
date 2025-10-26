@@ -8,7 +8,7 @@ CREATE PROCEDURE [dbo].[ERP_GetAvailableItemsFromPo]
     @CompanyCode INT
 AS
 BEGIN
-    SET NOCOUNT OFF;
+    SET NOCOUNT ON;
 
     -- Get items from Customer PO with remaining quantity to invoice
     SELECT 

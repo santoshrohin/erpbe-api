@@ -20,7 +20,7 @@ CREATE PROCEDURE [dbo].[ERP_GetAllCustomerPos]
     @SortOrder NVARCHAR(4) = 'DESC'
 AS
 BEGIN
-    SET NOCOUNT OFF;
+    SET NOCOUNT ON;
 
     BEGIN TRY
         DECLARE @Offset INT = (@PageNumber - 1) * @PageSize;

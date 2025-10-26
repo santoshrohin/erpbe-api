@@ -15,7 +15,7 @@ public class DeleteCustomerPoCommandValidator : AbstractValidator<DeleteCustomer
             .WithMessage("PO Code is required.");
 
         RuleFor(x => x.CompanyId)
-            .GreaterThan(0)
+            .NotEqual(0)
             .WithMessage("Company ID is required.");
     }
 }

@@ -7,7 +7,7 @@ CREATE PROCEDURE [dbo].[ERP_GetUserBasicInfo]
     @UserId INT
 AS
 BEGIN
-    SET NOCOUNT OFF;
+    SET NOCOUNT ON;
 
     BEGIN TRY
         SELECT 

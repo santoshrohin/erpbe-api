@@ -2,7 +2,7 @@ CREATE OR ALTER PROCEDURE [dbo].[ERP_GetCustomerTypeMasterById]
     @CTM_CODE INT
 AS
 BEGIN
-    SET NOCOUNT OFF;
+    SET NOCOUNT ON;
 
     SELECT 
         CTM_CODE,

@@ -38,7 +38,7 @@ CREATE OR ALTER PROCEDURE [dbo].[ERP_CreateCustomerMaster]
     @NewPartyCode INT OUTPUT
 AS
 BEGIN
-    SET NOCOUNT OFF;
+    SET NOCOUNT ON;
     
     BEGIN TRY
         BEGIN TRANSACTION;

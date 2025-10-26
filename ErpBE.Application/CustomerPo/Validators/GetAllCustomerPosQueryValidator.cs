@@ -11,7 +11,7 @@ public class GetAllCustomerPosQueryValidator : AbstractValidator<GetAllCustomerP
     public GetAllCustomerPosQueryValidator()
     {
         RuleFor(x => x.Parameters.CompanyId)
-            .GreaterThan(0)
+            .NotEqual(0)
             .WithMessage("Company ID is required.");
 
         RuleFor(x => x.Parameters.PageNumber)

@@ -43,34 +43,46 @@ var loggerConfig = new LoggerConfiguration()
     .Enrich.WithThreadId()
     .WriteTo.Console();
 
-// Configure SQL Server logging
-loggerConfig.WriteTo.MSSqlServer(
-    connectionString: builder.Configuration.GetConnectionString("DefaultConnection"),
-    sinkOptions: new Serilog.Sinks.MSSqlServer.MSSqlServerSinkOptions
+// Configure SQL Server logging with error handling
+try
+{
+    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+    if (!string.IsNullOrEmpty(connectionString))
     {
-        TableName = "Logs",
-        SchemaName = "dbo",
-        AutoCreateSqlTable = true
-    },
-    columnOptions: new Serilog.Sinks.MSSqlServer.ColumnOptions
-    {
-        // Additional custom columns
-        AdditionalColumns = new List<Serilog.Sinks.MSSqlServer.SqlColumn>
-        {
-            new Serilog.Sinks.MSSqlServer.SqlColumn { ColumnName = "UserId", DataType = System.Data.SqlDbType.NVarChar, DataLength = 50 },
-            new Serilog.Sinks.MSSqlServer.SqlColumn { ColumnName = "RequestId", DataType = System.Data.SqlDbType.NVarChar, DataLength = 50 },
-            new Serilog.Sinks.MSSqlServer.SqlColumn { ColumnName = "ActionName", DataType = System.Data.SqlDbType.NVarChar, DataLength = 100 }
-        }
-    });
+        loggerConfig.WriteTo.MSSqlServer(
+            connectionString: connectionString,
+            sinkOptions: new Serilog.Sinks.MSSqlServer.MSSqlServerSinkOptions
+            {
+                TableName = "Logs",
+                SchemaName = "dbo",
+                AutoCreateSqlTable = true
+            },
+            columnOptions: new Serilog.Sinks.MSSqlServer.ColumnOptions
+            {
+                // Additional custom columns
+                AdditionalColumns = new List<Serilog.Sinks.MSSqlServer.SqlColumn>
+                {
+                    new Serilog.Sinks.MSSqlServer.SqlColumn { ColumnName = "UserId", DataType = System.Data.SqlDbType.NVarChar, DataLength = 50 },
+                    new Serilog.Sinks.MSSqlServer.SqlColumn { ColumnName = "RequestId", DataType = System.Data.SqlDbType.NVarChar, DataLength = 50 },
+                    new Serilog.Sinks.MSSqlServer.SqlColumn { ColumnName = "ActionName", DataType = System.Data.SqlDbType.NVarChar, DataLength = 100 }
+                }
+            });
+    }
+}
+catch (Exception ex)
+{
+    // If SQL Server logging fails, continue with console logging only
+    Console.WriteLine($"WARNING: Could not initialize SQL Server logging: {ex.Message}");
+    Console.WriteLine("Application will continue with console logging only.");
+}
 
 Log.Logger = loggerConfig.CreateLogger();
 
 builder.Host.UseSerilog();
 
 // Test logging immediately
-Log.Information("Serilog configuration loaded successfully at {Timestamp}", DateTime.Now);
-Log.Warning("This is a test warning log");
-Log.Error("This is a test error log");
+Log.Information("Application starting up at {Timestamp}", DateTime.Now);
+Log.Information("Environment: {Environment}", builder.Environment.EnvironmentName);
 
 // ------------------ Services Registration ------------------
 
@@ -252,14 +264,19 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// Enable Swagger in development
-if (app.Environment.IsDevelopment())
+// IMPORTANT: Use custom exception handler for ALL environments (dev and production)
+// This returns detailed exception information instead of generic 500 errors
+app.UseMiddleware<GlobalExceptionHandlerMiddleware>();
+
+// Enable Swagger in development and for SmarterASP temp URL
+if (app.Environment.IsDevelopment() || 
+    app.Configuration.GetValue<bool>("EnableSwaggerInProduction", false))
 {
     app.UseSwagger();
     app.UseSwaggerUI(c =>
     {
         c.SwaggerEndpoint("/swagger/v1/swagger.json", "ErpBE API v1");
-        c.RoutePrefix = string.Empty; // Set Swagger UI at the app's root
+        c.RoutePrefix = "swagger"; // Use /swagger path in production
         c.DocumentTitle = "ErpBE API Documentation";
         c.DefaultModelsExpandDepth(-1); // Hide models section by default
         c.DisplayRequestDuration();

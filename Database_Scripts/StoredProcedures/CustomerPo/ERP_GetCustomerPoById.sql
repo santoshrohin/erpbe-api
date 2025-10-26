@@ -3,7 +3,7 @@ CREATE PROCEDURE [dbo].[ERP_GetCustomerPoById]
     @CompanyId INT
 AS
 BEGIN
-    SET NOCOUNT OFF;
+    SET NOCOUNT ON;
 
     BEGIN TRY
         -- Get Master Record with Customer Name, Project Name, Currency Name

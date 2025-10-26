@@ -2,7 +2,7 @@ CREATE PROCEDURE [dbo].[ERP_DeleteCustomerPoDetails]
     @PoCode INT
 AS
 BEGIN
-    SET NOCOUNT OFF;
+    SET NOCOUNT ON;
 
     BEGIN TRY
         -- Hard delete all detail records for this PO (used during update)

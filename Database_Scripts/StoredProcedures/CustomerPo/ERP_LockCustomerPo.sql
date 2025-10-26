@@ -2,7 +2,7 @@ CREATE PROCEDURE [dbo].[ERP_LockCustomerPo]
     @PoCode INT
 AS
 BEGIN
-    SET NOCOUNT OFF;
+    SET NOCOUNT ON;
 
     BEGIN TRY
         UPDATE CUSTPO_MASTER

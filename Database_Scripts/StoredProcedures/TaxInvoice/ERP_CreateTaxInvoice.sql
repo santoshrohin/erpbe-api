@@ -168,7 +168,7 @@ CREATE PROCEDURE [dbo].[ERP_CreateTaxInvoice]
     @NewInvoiceCode INT OUTPUT
 AS
 BEGIN
-    SET NOCOUNT OFF;
+    SET NOCOUNT ON;
 
     BEGIN TRY
         -- Insert into INVOICE_MASTER

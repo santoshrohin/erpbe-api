@@ -6,7 +6,7 @@ CREATE OR ALTER PROCEDURE [dbo].[ERP_GetCustomerMasterById]
     @CompanyId INT
 AS
 BEGIN
-    SET NOCOUNT OFF;
+    SET NOCOUNT ON;
     
     SELECT 
         PM.P_CODE AS Id,

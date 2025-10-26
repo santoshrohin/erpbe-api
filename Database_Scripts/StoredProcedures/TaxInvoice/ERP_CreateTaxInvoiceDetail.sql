@@ -52,7 +52,7 @@ ALTER PROCEDURE [dbo].[ERP_CreateTaxInvoiceDetail]
     @StoreCode INT = NULL
 AS
 BEGIN
-    SET NOCOUNT OFF;
+    SET NOCOUNT ON;
 
     BEGIN TRY
         -- Insert into INVOICE_DETAIL
