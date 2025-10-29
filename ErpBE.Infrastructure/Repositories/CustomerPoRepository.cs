@@ -1,6 +1,7 @@
 using Dapper;
 using ErpBE.Application.DTOs;
 using ErpBE.Application.Interfaces;
+using ErpBE.Infrastructure.Services;
 using Microsoft.Extensions.Configuration;
 using System.Data;
 using System.Data.SqlClient;
@@ -362,6 +363,74 @@ public class CustomerPoRepository : ICustomerPoRepository
             new { PoCode = poCode },
             commandType: CommandType.StoredProcedure
         );
+    }
+
+    public async Task<CustomerPoPrintDto?> GetPrintDataAsync(int poCode, int companyId, int companyCode, PoCopyType copyType)
+    {
+        using var connection = new SqlConnection(_connectionString);
+        await connection.OpenAsync();
+
+        using var multi = await connection.QueryMultipleAsync(
+            "ERP_GetCustomerPoPrintData",
+            new { PoCode = poCode, CompanyId = companyId, CompanyCode = companyCode },
+            commandType: CommandType.StoredProcedure
+        );
+
+        // Read Result Set 1: Company Info
+        var company = await multi.ReadFirstOrDefaultAsync<CompanyPrintInfo>();
+        if (company == null)
+            return null;
+
+        // Read Result Set 2: PO Header (with extended fields)
+        var poHeaderExtended = await multi.ReadFirstOrDefaultAsync<PoHeaderExtendedData>();
+        if (poHeaderExtended == null)
+            return null;
+
+        // Read Result Set 3: Customer Info
+        var customer = await multi.ReadFirstOrDefaultAsync<CustomerPrintInfo>();
+        if (customer == null)
+            return null;
+
+        // Read Result Set 4: Line Items
+        var lineItems = (await multi.ReadAsync<PoDetailPrintInfo>()).ToList();
+
+        // Read Result Set 5: Totals
+        var totals = await multi.ReadFirstOrDefaultAsync<PoTotalsPrintInfo>();
+        if (totals == null)
+            return null;
+
+        // Convert total amount to words
+        totals.AmountInWords = NumberToWordsConverter.ConvertToWords((double)totals.TotalAmount);
+
+        // Build and return the print DTO
+        return new CustomerPoPrintDto
+        {
+            Company = company,
+            PoHeader = new PoHeaderPrintInfo
+            {
+                SaleOrderNo = poHeaderExtended.SaleOrderNo,
+                SaleOrderDate = poHeaderExtended.SaleOrderDate,
+                PoNo = poHeaderExtended.PoNo,
+                PoDate = poHeaderExtended.PoDate
+            },
+            Customer = customer,
+            LineItems = lineItems,
+            Totals = totals,
+            CopyType = copyType,
+            Consignee = poHeaderExtended.Consignee,
+            TransportThrough = poHeaderExtended.TransportThrough,
+            DeliveryTerms = poHeaderExtended.DeliveryTerms,
+            Narrations = poHeaderExtended.Narrations
+        };
+    }
+    
+    // Helper class to read PO header with additional fields from stored procedure
+    private class PoHeaderExtendedData : PoHeaderPrintInfo
+    {
+        public string? Consignee { get; set; }
+        public string? TransportThrough { get; set; }
+        public string? DeliveryTerms { get; set; }
+        public string? Narrations { get; set; }
     }
 }
 

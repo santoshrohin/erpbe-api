@@ -195,6 +195,7 @@ builder.Services.AddScoped<ITaxInvoiceRepository, TaxInvoiceRepository>();
 builder.Services.AddScoped<IPdfService, TaxInvoicePdfService>();
 
 // Customer PO services
+builder.Services.AddScoped<ICustomerPoPdfService, CustomerPoPdfService>();
 builder.Services.AddScoped<ICustomerPoRepository, CustomerPoRepository>();
 
 // Logs Repository

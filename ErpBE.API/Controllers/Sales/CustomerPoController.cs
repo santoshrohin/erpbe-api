@@ -1,6 +1,8 @@
+using ErpBE.API.Models;
 using ErpBE.Application.CustomerPo.Commands;
 using ErpBE.Application.CustomerPo.Queries;
 using ErpBE.Application.DTOs;
+using ErpBE.Application.Interfaces;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -17,11 +19,19 @@ public class CustomerPoController : ControllerBase
 {
     private readonly IMediator _mediator;
     private readonly ILogger<CustomerPoController> _logger;
+    private readonly ICustomerPoRepository _repository;
+    private readonly ICustomerPoPdfService _pdfService;
 
-    public CustomerPoController(IMediator mediator, ILogger<CustomerPoController> logger)
+    public CustomerPoController(
+        IMediator mediator, 
+        ILogger<CustomerPoController> logger,
+        ICustomerPoRepository repository,
+        ICustomerPoPdfService pdfService)
     {
         _mediator = mediator;
         _logger = logger;
+        _repository = repository;
+        _pdfService = pdfService;
     }
 
     /// <summary>
@@ -148,5 +158,97 @@ public class CustomerPoController : ControllerBase
 
         return Ok(new { message = "Customer PO deleted successfully.", poCode = id });
     }
+
+    #region Print Customer PO
+
+    /// <summary>
+    /// Print Customer PO (Sales Order) as PDF
+    /// </summary>
+    /// <param name="poCode">PO Code</param>
+    /// <param name="companyId">Company ID</param>
+    /// <param name="companyCode">Company Code (from login response)</param>
+    /// <returns>PDF file</returns>
+    [HttpGet("{poCode}/print")]
+    public async Task<IActionResult> PrintCustomerPo(
+        int poCode,
+        [FromQuery] int companyId,
+        [FromQuery] int companyCode)
+    {
+        _logger.LogInformation("GET /api/CustomerPo/{PoCode}/print - Printing PO: {PoCode}, CompanyId: {CompanyId}, CompanyCode: {CompanyCode}",
+            poCode, poCode, companyId, companyCode);
+
+        try
+        {
+            // Get print data - always use Original copy type
+            var printData = await _repository.GetPrintDataAsync(poCode, companyId, companyCode, PoCopyType.Original);
+
+            if (printData == null)
+            {
+                _logger.LogWarning("Customer PO not found for printing - PoCode: {PoCode}, CompanyId: {CompanyId}",
+                    poCode, companyId);
+                return NotFound(new { message = $"Customer PO with code '{poCode}' not found." });
+            }
+
+            // Generate PDF (single copy only)
+            var pdfBytes = _pdfService.GenerateCustomerPoPdf(printData);
+
+            // Return PDF file
+            return File(pdfBytes, "application/pdf", $"CustomerPO_{printData.PoHeader.SaleOrderNo}.pdf");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error printing Customer PO {PoCode}", poCode);
+            return StatusCode(500, new { message = "An error occurred while generating the PDF.", error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Print Multiple Customer POs as a single PDF
+    /// </summary>
+    /// <param name="request">Print request with PO codes and copy types</param>
+    /// <returns>Merged PDF file</returns>
+    [HttpPost("print-batch")]
+    public async Task<IActionResult> PrintBatchCustomerPos([FromBody] BatchPrintPoRequest request)
+    {
+        _logger.LogInformation("POST /api/CustomerPo/print-batch - Printing {Count} POs", request.Pos.Count);
+
+        try
+        {
+            var printDataList = new List<CustomerPoPrintDto>();
+
+            foreach (var poRequest in request.Pos)
+            {
+                var printData = await _repository.GetPrintDataAsync(
+                    poRequest.PoCode, 
+                    request.CompanyId,
+                    request.CompanyId, // Pass companyCode (same as companyId for now)
+                    PoCopyType.Original);
+                
+                if (printData != null)
+                {
+                    printDataList.Add(printData);
+                }
+            }
+
+            if (printDataList.Count == 0)
+            {
+                _logger.LogWarning("No valid Customer POs found for batch printing");
+                return NotFound(new { message = "No valid Customer POs found for printing." });
+            }
+
+            // Generate merged PDF
+            var pdfBytes = _pdfService.GenerateBatchCustomerPoPdf(printDataList);
+
+            // Return PDF file
+            return File(pdfBytes, "application/pdf", $"CustomerPOs_Batch_{DateTime.Now:yyyyMMdd_HHmmss}.pdf");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error printing batch Customer POs");
+            return StatusCode(500, new { message = "An error occurred while generating the batch PDF.", error = ex.Message });
+        }
+    }
+
+    #endregion
 }
 

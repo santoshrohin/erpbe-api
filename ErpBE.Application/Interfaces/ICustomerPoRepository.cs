@@ -46,5 +46,10 @@ public interface ICustomerPoRepository
     /// Unlocks a PO after editing
     /// </summary>
     Task UnlockAsync(int poCode);
+
+    /// <summary>
+    /// Gets Customer PO print data with all required information for PDF generation
+    /// </summary>
+    Task<CustomerPoPrintDto?> GetPrintDataAsync(int poCode, int companyId, int companyCode, PoCopyType copyType);
 }
 
