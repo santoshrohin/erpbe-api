@@ -1,3 +1,7 @@
+IF EXISTS (SELECT * FROM sys.objects WHERE type = 'P' AND name = 'ERP_GetCustomerPoById')
+    DROP PROCEDURE [dbo].[ERP_GetCustomerPoById]
+GO
+
 CREATE PROCEDURE [dbo].[ERP_GetCustomerPoById]
     @PoCode INT,
     @CompanyId INT
@@ -66,6 +70,7 @@ BEGIN
         SELECT 
             d.CPOD_CPOM_CODE AS PoCode,
             d.CPOD_I_CODE AS ItemCode,
+            i.I_CODENO AS ItemCodeName,
             i.I_NAME AS ItemName,
             d.CPOD_UOM_CODE AS UomCode,
             u.I_UOM_NAME AS UomName,
@@ -86,7 +91,8 @@ BEGIN
             d.CPOD_AMORTRATE AS AmortizationRate,
             d.CPOD_DIEAMORTRATE AS DieAmortizationRate,
             d.CPOD_DISC_PER AS DiscountPercentage,
-            d.CPOD_DISC_AMT AS DiscountAmount
+            d.CPOD_DISC_AMT AS DiscountAmount,
+            d.CPOD_ST_CODE AS TaxCategoryCode
         FROM CUSTPO_DETAIL d
         INNER JOIN ITEM_MASTER i ON d.CPOD_I_CODE = i.I_CODE
         INNER JOIN ITEM_UNIT_MASTER u ON d.CPOD_UOM_CODE = u.I_UOM_CODE

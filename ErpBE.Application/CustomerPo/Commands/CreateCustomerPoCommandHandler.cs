@@ -62,30 +62,32 @@ public class CreateCustomerPoCommandHandler : IRequestHandler<CreateCustomerPoCo
             ProjectName = request.ProjectName
         };
 
-        // Map details
-        var poDetails = request.Details.Select(d => new CustomerPoDetailDto
-        {
-            ItemCode = d.ItemCode,
-            UomCode = d.UomCode,
-            OrderedQuantity = d.OrderedQuantity,
-            Rate = d.Rate,
-            Amount = d.Amount,
-            Description = d.Description,
-            CustomerItemCode = d.CustomerItemCode,
-            CustomerItemName = d.CustomerItemName,
-            Status = d.Status,
-            DispatchedQuantity = d.DispatchedQuantity,
-            IsOrder = d.IsOrder,
-            StoreCode = d.StoreCode,
-            CurrencyCode = d.CurrencyCode,
-            WorkOrderQuantity = d.WorkOrderQuantity,
-            ModificationNumber = d.ModificationNumber,
-            ModificationDate = d.ModificationDate,
-            AmortizationRate = d.AmortizationRate,
-            DieAmortizationRate = d.DieAmortizationRate,
-            DiscountPercentage = d.DiscountPercentage,
-            DiscountAmount = d.DiscountAmount
-        }).ToList();
+        // Map details - handle null Details list
+        var poDetails = (request.Details ?? new List<CreateCustomerPoDetailCommand>())
+            .Select(d => new CustomerPoDetailDto
+            {
+                ItemCode = d.ItemCode,
+                UomCode = d.UomCode,
+                OrderedQuantity = d.OrderedQuantity,
+                Rate = d.Rate,
+                Amount = d.Amount,
+                Description = d.Description,
+                CustomerItemCode = d.CustomerItemCode,
+                CustomerItemName = d.CustomerItemName,
+                Status = d.Status,
+                DispatchedQuantity = d.DispatchedQuantity,
+                IsOrder = d.IsOrder,
+                StoreCode = d.StoreCode,
+                CurrencyCode = d.CurrencyCode,
+                WorkOrderQuantity = d.WorkOrderQuantity,
+                ModificationNumber = d.ModificationNumber,
+                ModificationDate = d.ModificationDate,
+                AmortizationRate = d.AmortizationRate,
+                DieAmortizationRate = d.DieAmortizationRate,
+                DiscountPercentage = d.DiscountPercentage,
+                DiscountAmount = d.DiscountAmount,
+                TaxCategoryCode = d.TaxCategoryCode
+            }).ToList();
 
         // Create PO with details in transaction
         return await _repository.CreateAsync(poMaster, poDetails);

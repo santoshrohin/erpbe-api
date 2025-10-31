@@ -10,6 +10,7 @@ public class CustomerPoDetailDto
 
     // Core Item Information
     public int ItemCode { get; set; }
+    public string? ItemCodeName { get; set; } // I_CODENO from ITEM_MASTER
     public string? ItemName { get; set; } // Joined from ITEM_MASTER
     public int UomCode { get; set; }
     public string? UomName { get; set; } // Joined from UNIT_MASTER
@@ -47,5 +48,8 @@ public class CustomerPoDetailDto
     // Discount
     public double? DiscountPercentage { get; set; }
     public double? DiscountAmount { get; set; }
+    
+    // Tax Category (Sales Tax Code)
+    public int? TaxCategoryCode { get; set; } // Maps to CPOD_ST_CODE in database
 }
 

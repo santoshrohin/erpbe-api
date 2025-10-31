@@ -1,3 +1,7 @@
+IF EXISTS (SELECT * FROM sys.objects WHERE type = 'P' AND name = 'ERP_GetAllCustomerPos')
+    DROP PROCEDURE [dbo].[ERP_GetAllCustomerPos]
+GO
+
 CREATE PROCEDURE [dbo].[ERP_GetAllCustomerPos]
     @CompanyId INT,
     @PageNumber INT = 1,
@@ -82,7 +86,7 @@ BEGIN
             SET @WHERE = @WHERE + ' AND m.CPOM_IS_VERBAL = @IsVerbalOrder ';
 
         -- Build ORDER BY clause
-        DECLARE @ORDERBY NVARCHAR(100) = ' ORDER BY ';
+        DECLARE @ORDERBY NVARCHAR(200) = ' ORDER BY ';
         IF @SortBy = 'PoCode'
             SET @ORDERBY = @ORDERBY + 'm.CPOM_CODE ';
         ELSE IF @SortBy = 'PoNumber'
@@ -93,6 +97,13 @@ BEGIN
             SET @ORDERBY = @ORDERBY + 'p.P_NAME ';
         ELSE IF @SortBy = 'GrandTotal'
             SET @ORDERBY = @ORDERBY + 'm.CPOM_GRAND_TOT ';
+        ELSE IF @SortBy = 'WorkOrderNumber'
+            SET @ORDERBY = @ORDERBY + 'm.CPOM_WORK_ODR_NO ';
+        ELSE IF @SortBy = 'AmendmentCount'
+            SET @ORDERBY = @ORDERBY + 'm.CPOM_AM_COUNT ';
+        ELSE IF @SortBy = 'CustomerPartNo'
+            -- Sort by first detail's customer item code using subquery
+            SET @ORDERBY = @ORDERBY + '(SELECT TOP 1 d.CPOD_CUST_I_CODE FROM CUSTPO_DETAIL d WHERE d.CPOD_CPOM_CODE = m.CPOM_CODE ORDER BY d.CPOD_CPOM_CODE) ';
         ELSE
             SET @ORDERBY = @ORDERBY + 'm.CPOM_CODE ';
 

@@ -1,3 +1,7 @@
+IF EXISTS (SELECT * FROM sys.objects WHERE type = 'P' AND name = 'ERP_CreateCustomerPoDetail')
+    DROP PROCEDURE [dbo].[ERP_CreateCustomerPoDetail]
+GO
+
 CREATE PROCEDURE [dbo].[ERP_CreateCustomerPoDetail]
     @PoCode INT,
     @ItemCode INT,
@@ -19,7 +23,8 @@ CREATE PROCEDURE [dbo].[ERP_CreateCustomerPoDetail]
     @AmortizationRate FLOAT = NULL,
     @DieAmortizationRate FLOAT = NULL,
     @DiscountPercentage FLOAT = NULL,
-    @DiscountAmount FLOAT = NULL
+    @DiscountAmount FLOAT = NULL,
+    @TaxCategoryCode INT = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -61,7 +66,7 @@ BEGIN
             @Status,
             @DispatchedQuantity,
             @IsOrder,
-            @StoreCode,
+            @TaxCategoryCode,
             @CurrencyCode,
             @WorkOrderQuantity,
             @ModificationNumber,

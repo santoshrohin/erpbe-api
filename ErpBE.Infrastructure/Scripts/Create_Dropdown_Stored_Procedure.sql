@@ -1,41 +1,35 @@
-USE [db_a2ea4b_sunv2]
-GO
-
--- Create usp_GetDropdownData stored procedure
-IF EXISTS (SELECT * FROM sys.objects WHERE type = 'P' AND name = 'usp_GetDropdownData')
-    DROP PROCEDURE [dbo].[usp_GetDropdownData]
-GO
-
-CREATE PROCEDURE [dbo].[usp_GetDropdownData]
+CREATE PROCEDURE [dbo].[usp_GetDropdownDataPaged]
     @Table NVARCHAR(100),
     @IdColumn NVARCHAR(50),
     @DisplayColumn NVARCHAR(50),
-    @WhereClause NVARCHAR(500) = NULL,
-    @OrderBy NVARCHAR(100) = NULL
+    @WhereClause NVARCHAR(1000) = NULL,
+    @OrderBy NVARCHAR(100) = NULL,
+    @SearchText NVARCHAR(250) = NULL,
+    @Skip INT = 0,
+    @Take INT = 20
 AS
 BEGIN
     SET NOCOUNT ON;
-    
     DECLARE @Sql NVARCHAR(MAX);
-    
-    -- Build the SQL query
-    SET @Sql = 'SELECT ' + @IdColumn + ' AS Id, ' + @DisplayColumn + ' AS DisplayName FROM ' + @Table;
-    
-    -- Add WHERE clause if provided
-    IF @WhereClause IS NOT NULL AND @WhereClause <> ''
+    DECLARE @Where NVARCHAR(MAX) = '';
+    DECLARE @Order NVARCHAR(MAX);
+    -- Build dynamic WHERE clause
+    IF @WhereClause IS NOT NULL AND LTRIM(RTRIM(@WhereClause)) <> ''
+        SET @Where = ' WHERE ' + @WhereClause;
+    -- Add search filter
+    IF @SearchText IS NOT NULL AND LTRIM(RTRIM(@SearchText)) <> ''
     BEGIN
-        SET @Sql = @Sql + ' WHERE ' + @WhereClause;
-    END;
-    
-    -- Add ORDER BY clause if provided
-    IF @OrderBy IS NOT NULL AND @OrderBy <> ''
-    BEGIN
-        SET @Sql = @Sql + ' ORDER BY ' + @OrderBy;
-    END;
-    
-    -- Execute the dynamic SQL
-    EXEC sp_executesql @Sql;
+        IF LEN(@Where) > 0
+            SET @Where = @Where + ' AND (';
+        ELSE
+            SET @Where = ' WHERE (';
+        SET @Where = @Where + @DisplayColumn + ' LIKE @SearchFilter' + ' OR ' + @IdColumn + ' LIKE @SearchFilter';
+        SET @Where = @Where + ')';
+    END
+    SET @Order = ' ORDER BY ' + CASE WHEN @OrderBy IS NOT NULL AND LEN(@OrderBy) > 0 THEN @OrderBy ELSE @DisplayColumn + ' ASC' END + ' OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY';
+    SET @Sql = 'SELECT ' + @IdColumn + ' AS Id, ' + @DisplayColumn + ' AS DisplayName FROM ' + @Table + @Where + @Order + '; ' +
+        'SELECT COUNT(1) AS TotalCount FROM ' + @Table + @Where + ';';
+    DECLARE @ParamDef NVARCHAR(MAX) = N'@Skip INT, @Take INT, @SearchFilter NVARCHAR(252)';
+    EXEC sp_executesql @Sql, @ParamDef, @Skip = @Skip, @Take = @Take, @SearchFilter = '%' + @SearchText + '%';
 END
 GO
-
-PRINT 'usp_GetDropdownData stored procedure created successfully!';

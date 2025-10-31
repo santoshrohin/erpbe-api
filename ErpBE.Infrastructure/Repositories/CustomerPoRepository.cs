@@ -3,6 +3,7 @@ using ErpBE.Application.DTOs;
 using ErpBE.Application.Interfaces;
 using ErpBE.Infrastructure.Services;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using System.Data;
 using System.Data.SqlClient;
 using System.Text;
@@ -15,11 +16,13 @@ namespace ErpBE.Infrastructure.Repositories;
 public class CustomerPoRepository : ICustomerPoRepository
 {
     private readonly string _connectionString;
+    private readonly ILogger<CustomerPoRepository> _logger;
 
-    public CustomerPoRepository(IConfiguration configuration)
+    public CustomerPoRepository(IConfiguration configuration, ILogger<CustomerPoRepository> logger)
     {
         _connectionString = configuration.GetConnectionString("DefaultConnection") 
             ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+        _logger = logger;
     }
 
     public async Task<CustomerPoMasterDto> CreateAsync(CustomerPoMasterDto po, IEnumerable<CustomerPoDetailDto> details)
@@ -32,6 +35,9 @@ public class CustomerPoRepository : ICustomerPoRepository
 
         try
         {
+            _logger.LogInformation("Creating Customer PO - CustomerCode: {CustomerCode}, PoNumber: {PoNumber}, CompanyId: {CompanyId}, DetailsCount: {DetailsCount}",
+                po.CustomerCode, po.PoNumber, po.CompanyId, details.Count());
+
             // 1. Create Master
             var masterParameters = new DynamicParameters();
             masterParameters.Add("@CustomerCode", po.CustomerCode);
@@ -74,12 +80,27 @@ public class CustomerPoRepository : ICustomerPoRepository
             masterParameters.Add("@ProjectCode", po.ProjectCode);
             masterParameters.Add("@ProjectName", po.ProjectName);
 
-            poCode = await connection.ExecuteScalarAsync<int>(
+            var result = await connection.ExecuteScalarAsync<object>(
                 "ERP_CreateCustomerPo",
                 masterParameters,
                 transaction,
                 commandType: CommandType.StoredProcedure
             );
+
+            if (result == null)
+            {
+                _logger.LogError("ERP_CreateCustomerPo returned null result");
+                throw new InvalidOperationException("Failed to create Customer PO. Stored procedure returned null.");
+            }
+
+            poCode = Convert.ToInt32(result);
+            _logger.LogInformation("Customer PO created successfully. PoCode: {PoCode}", poCode);
+
+            if (poCode == 0)
+            {
+                _logger.LogError("ERP_CreateCustomerPo returned PoCode 0");
+                throw new InvalidOperationException("Failed to create Customer PO. PoCode returned was 0.");
+            }
 
             // 2. Create Details
             foreach (var detail in details)
@@ -106,6 +127,7 @@ public class CustomerPoRepository : ICustomerPoRepository
                 detailParameters.Add("@DieAmortizationRate", detail.DieAmortizationRate);
                 detailParameters.Add("@DiscountPercentage", detail.DiscountPercentage);
                 detailParameters.Add("@DiscountAmount", detail.DiscountAmount);
+                detailParameters.Add("@TaxCategoryCode", detail.TaxCategoryCode);
 
                 await connection.ExecuteAsync(
                     "ERP_CreateCustomerPoDetail",
@@ -116,15 +138,31 @@ public class CustomerPoRepository : ICustomerPoRepository
             }
 
             transaction.Commit();
+            _logger.LogInformation("Transaction committed successfully. PoCode: {PoCode}", poCode);
         }
-        catch
+        catch (SqlException sqlEx)
         {
+            _logger.LogError(sqlEx, "SQL error creating Customer PO. Error: {ErrorMessage}, ErrorNumber: {ErrorNumber}", sqlEx.Message, sqlEx.Number);
+            transaction.Rollback();
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error creating Customer PO. Error: {ErrorMessage}", ex.Message);
             transaction.Rollback();
             throw;
         }
 
         // 3. Return created PO (after transaction is completed and connection closed)
-        return await GetByIdAsync(poCode, po.CompanyId);
+        _logger.LogInformation("Retrieving created Customer PO. PoCode: {PoCode}, CompanyId: {CompanyId}", poCode, po.CompanyId);
+        var createdPo = await GetByIdAsync(poCode, po.CompanyId);
+        if (createdPo == null)
+        {
+            _logger.LogError("GetByIdAsync returned null for PoCode: {PoCode}, CompanyId: {CompanyId}", poCode, po.CompanyId);
+            throw new InvalidOperationException($"Failed to retrieve created Customer PO. PoCode: {poCode}, CompanyId: {po.CompanyId}. The PO may have been created but cannot be retrieved.");
+        }
+        _logger.LogInformation("Successfully retrieved created Customer PO. PoCode: {PoCode}", poCode);
+        return createdPo;
     }
 
     public async Task<CustomerPoMasterDto> UpdateAsync(CustomerPoMasterDto po, IEnumerable<CustomerPoDetailDto> details)
@@ -231,6 +269,7 @@ public class CustomerPoRepository : ICustomerPoRepository
                 detailParameters.Add("@DieAmortizationRate", detail.DieAmortizationRate);
                 detailParameters.Add("@DiscountPercentage", detail.DiscountPercentage);
                 detailParameters.Add("@DiscountAmount", detail.DiscountAmount);
+                detailParameters.Add("@TaxCategoryCode", detail.TaxCategoryCode);
 
                 await connection.ExecuteAsync(
                     "ERP_CreateCustomerPoDetail",

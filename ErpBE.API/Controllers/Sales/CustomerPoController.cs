@@ -88,10 +88,22 @@ public class CustomerPoController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> CreateCustomerPo([FromBody] CreateCustomerPoCommand command)
     {
+        if (command == null)
+        {
+            _logger.LogWarning("CreateCustomerPo called with null command");
+            return BadRequest(new { message = "Request body cannot be null." });
+        }
+
         _logger.LogInformation("Creating new Customer PO - PoNumber: {PoNumber}, CompanyId: {CompanyId}",
-            command.PoNumber, command.CompanyId);
+            command.PoNumber ?? "null", command.CompanyId);
 
         var result = await _mediator.Send(command);
+
+        if (result == null)
+        {
+            _logger.LogError("CreateCustomerPo command returned null result");
+            return StatusCode(500, new { message = "Failed to create Customer PO. Result was null." });
+        }
 
         _logger.LogInformation("Customer PO created successfully - PoCode: {PoCode}", result.PoCode);
 

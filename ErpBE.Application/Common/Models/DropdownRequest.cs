@@ -7,5 +7,8 @@ namespace ErpBE.Application.Common.Models
         public string DisplayColumn { get; set; }      // e.g., "CountryName"
         public string Where { get; set; }              // Optional, e.g., "IsActive = 1"
         public string OrderBy { get; set; }            // Optional, e.g., "CountryName ASC"
+        public int? Skip { get; set; }    // For paging (e.g., 0, 25, 50)
+        public int? Take { get; set; }    // Page size (e.g., 20, 50)
+        public string SearchText { get; set; } // For live search/autocomplete
     }
 }

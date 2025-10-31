@@ -110,5 +110,8 @@ public class CreateCustomerPoDetailCommand
     // Discount
     public double? DiscountPercentage { get; set; }
     public double? DiscountAmount { get; set; }
+    
+    // Tax Category (Sales Tax Code)
+    public int? TaxCategoryCode { get; set; } // Maps to CPOD_ST_CODE in database
 }
 
