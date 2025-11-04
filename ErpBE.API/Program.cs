@@ -198,6 +198,10 @@ builder.Services.AddScoped<IPdfService, TaxInvoicePdfService>();
 builder.Services.AddScoped<ICustomerPoPdfService, CustomerPoPdfService>();
 builder.Services.AddScoped<ICustomerPoRepository, CustomerPoRepository>();
 
+// Company and Financial Year services
+builder.Services.AddScoped<ICompanyRepository, CompanyRepository>();
+builder.Services.AddScoped<IFinancialYearRepository, FinancialYearRepository>();
+
 // Logs Repository
 builder.Services.AddScoped<ILogsRepository, LogsRepository>();
 
