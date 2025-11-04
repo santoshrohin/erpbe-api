@@ -18,11 +18,12 @@ namespace ErpBE.Application.Logs.Queries
             var parameters = request.QueryParameters;
 
             // Cap page size at 100 to match stored procedure behavior
-            var actualPageSize = Math.Min(Math.Max(parameters.PageSize, 1), 100);
+            // If pageSize is 0 or negative, default to 50
+            var actualPageSize = parameters.PageSize <= 0 ? 50 : Math.Min(parameters.PageSize, 100);
 
             var (logs, totalCount) = await _logsRepository.GetLogsAsync(
                 parameters.PageNumber,
-                parameters.PageSize,
+                actualPageSize,
                 parameters.Level,
                 parameters.SearchTerm,
                 parameters.StartDate,

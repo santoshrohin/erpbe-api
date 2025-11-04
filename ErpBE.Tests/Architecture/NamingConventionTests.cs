@@ -33,12 +33,14 @@ namespace ErpBE.Tests.Architecture
         [Fact]
         public void Repositories_ShouldEndWithRepository()
         {
-            // Arrange & Act
+            // Arrange & Act - Exclude nested classes (they have a '/' in their full name)
             var result = Types.InAssembly(typeof(ErpBE.Infrastructure.AssemblyReference).Assembly)
                 .That()
                 .ResideInNamespace($"{InfrastructureNamespace}.Repositories")
                 .And()
                 .AreClasses()
+                .And()
+                .AreNotNested()
                 .Should()
                 .HaveNameEndingWith("Repository")
                 .GetResult();

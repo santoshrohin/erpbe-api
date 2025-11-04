@@ -21,16 +21,10 @@ namespace ErpBE.Infrastructure.Repositories
             using var connection = new SqlConnection(_connectionString);
             await connection.OpenAsync();
 
-            // Query matches legacy: select distinct CM_ID,CM_NAME from COMPANY_MASTER where CM_ACTIVE_IND=1
-            var query = @"
-                SELECT DISTINCT 
-                    CM_ID AS Id,
-                    CM_NAME AS DisplayName
-                FROM COMPANY_MASTER 
-                WHERE CM_ACTIVE_IND = 1 
-                ORDER BY CM_NAME";
-
-            var companies = await connection.QueryAsync<CompanyDto>(query);
+            var companies = await connection.QueryAsync<CompanyDto>(
+                "ERP_GetActiveCompanies",
+                commandType: CommandType.StoredProcedure
+            );
             return companies.ToList();
         }
     }
