@@ -1,62 +1,82 @@
-using Microsoft.AspNetCore.Mvc.Testing;
+using AutoFixture;
+using MediatR;
 using Microsoft.Extensions.DependencyInjection;
-using System.Net.Http;
 using System.Threading.Tasks;
 using Xunit;
+using static ErpBE.Tests.Integration.IntegrationFixture;
 
-namespace ErpBE.Tests.Integration
+namespace ErpBE.Tests.Integration;
+
+/// <summary>
+/// Base class for integration tests using ServiceProvider (matches reference implementation)
+/// Tests use test database connection (separate from production) and Respawner cleans up after each test
+/// SAFETY: Tests NEVER touch actual database - they use isolated Docker containers
+/// </summary>
+[Collection(nameof(IntegrationFixture))]
+public abstract class IntegrationTestBase : IAsyncLifetime
 {
+    private static ServiceProvider _serviceProvider = default!;
+    private readonly List<IServiceScope> _serviceScopes = [];
+    protected Fixture Fixture { get; private set; } = new();
+    protected ISender Mediator { get; private set; } = default!;
+
     /// <summary>
-    /// Base class for integration tests using production database
-    /// Tests should create, test, and delete their own test data
+    /// This will be executed before each test
     /// </summary>
-    public abstract class IntegrationTestBase : IClassFixture<WebApplicationFactory<Program>>
+    public virtual Task InitializeAsync()
     {
-        protected readonly WebApplicationFactory<Program> Factory;
-        protected readonly HttpClient Client;
+        _serviceProvider = BuildServiceProvider();
 
-        protected IntegrationTestBase(WebApplicationFactory<Program> factory)
+        IServiceScope serviceScope;
+        serviceScope = _serviceProvider.CreateScope();
+        _serviceScopes.Add(serviceScope);
+
+        Mediator = serviceScope.ServiceProvider.GetRequiredService<ISender>();
+        Fixture = new Fixture();
+
+        return Task.CompletedTask;
+    }
+
+    public async Task DisposeAsync()
+    {
+        await ResetDatabaseAsync();
+        _serviceScopes.ForEach(s => s.Dispose());
+        await _serviceProvider.DisposeAsync();
+    }
+
+    public static TServices GetServices<TServices>() where TServices : class
+    {
+        return _serviceProvider.CreateScope().ServiceProvider.GetRequiredService<TServices>();
+    }
+
+    protected T GetService<T>() where T : class
+    {
+        return _serviceScopes.Last().ServiceProvider.GetRequiredService<T>();
+    }
+
+    /// <summary>
+    /// Gets authentication token for testing using MediatR
+    /// Uses dedicated TestUser account with Admin role
+    /// Note: TestUser must be created using Setup_Test_User.sql script
+    /// </summary>
+    protected async Task<string> GetAuthTokenAsync()
+    {
+        var loginRequest = new ErpBE.Application.Auth.Queries.Login.LoginRequest
         {
-            Factory = factory;
-            Client = Factory.CreateClient();
+            Username = "TestUser",
+            Password = "Test@123",
+            CompanyId = 1,
+            FinancialYearCode = -2147483641
+        };
+
+        var response = await Mediator.Send(loginRequest);
+        
+        if (response == null || string.IsNullOrEmpty(response.Token))
+        {
+            throw new System.Exception($"Login failed for TestUser. " +
+                "Make sure to run 'Setup_Test_User.sql' script first!");
         }
 
-        protected T GetService<T>() where T : class
-        {
-            return Factory.Services.GetRequiredService<T>();
-        }
-
-        /// <summary>
-        /// Gets authentication token for testing
-        /// Uses dedicated TestUser account with Admin role
-        /// Note: TestUser must be created using Setup_Test_User.sql script
-        /// </summary>
-        protected async Task<string> GetAuthTokenAsync()
-        {
-            var loginRequest = new
-            {
-                Username = "TestUser",
-                Password = "Test@123",
-                CompanyId = 1,
-                FinancialYearCode = -2147483641
-            };
-
-            var json = System.Text.Json.JsonSerializer.Serialize(loginRequest);
-            var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
-            
-            var response = await Client.PostAsync("/api/Login", content);
-            
-            if (!response.IsSuccessStatusCode)
-            {
-                var errorContent = await response.Content.ReadAsStringAsync();
-                throw new System.Exception($"Login failed for TestUser. Status: {response.StatusCode}, Error: {errorContent}. " +
-                    "Make sure to run 'Setup_Test_User.sql' script first!");
-            }
-
-            var responseContent = await response.Content.ReadAsStringAsync();
-            var result = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(responseContent);
-            
-            return result.GetProperty("token").GetString()!;
-        }
+        return response.Token;
     }
 }

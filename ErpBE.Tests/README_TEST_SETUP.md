@@ -1,7 +1,18 @@
 # Integration Test Setup Guide
 
 ## Overview
-Integration tests use the **production database** with a dedicated test user account. Tests create, verify, and clean up their own test data.
+Integration tests use **Testcontainers (Docker containers)** for complete database isolation. This matches the reference implementation pattern.
+
+### Safety Features:
+1. **Complete Database Isolation**: Tests use isolated Docker containers (Testcontainers) - NEVER touch actual database
+2. **Random Database Names**: Each test run gets a unique random database name (GUID) for complete isolation
+3. **Automatic Cleanup**: Respawner automatically cleans up test data after each test
+4. **Container Disposal**: Docker containers are automatically deleted after tests complete
+
+### Database Configuration:
+- **Testcontainers**: Always used - creates isolated Docker SQL Server containers
+- **Random Database**: Each test run creates a unique database with a random GUID name
+- **No Production Risk**: Tests CANNOT access production database - they use completely isolated containers
 
 ---
 

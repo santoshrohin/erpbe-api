@@ -1,8 +1,8 @@
 using ErpBE.API.Models;
 using ErpBE.Application.CustomerPo.Commands;
 using ErpBE.Application.CustomerPo.Queries;
-using ErpBE.Application.DTOs;
 using ErpBE.Application.Interfaces;
+using ErpBE.Application.DTOs;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -19,18 +19,15 @@ public class CustomerPoController : ControllerBase
 {
     private readonly IMediator _mediator;
     private readonly ILogger<CustomerPoController> _logger;
-    private readonly ICustomerPoRepository _repository;
     private readonly ICustomerPoPdfService _pdfService;
 
     public CustomerPoController(
         IMediator mediator, 
         ILogger<CustomerPoController> logger,
-        ICustomerPoRepository repository,
         ICustomerPoPdfService pdfService)
     {
         _mediator = mediator;
         _logger = logger;
-        _repository = repository;
         _pdfService = pdfService;
     }
 
@@ -192,7 +189,14 @@ public class CustomerPoController : ControllerBase
         try
         {
             // Get print data - always use Original copy type
-            var printData = await _repository.GetPrintDataAsync(poCode, companyId, companyCode, PoCopyType.Original);
+            var query = new GetCustomerPoPrintDataQuery 
+            { 
+                PoCode = poCode, 
+                CompanyId = companyId, 
+                CompanyCode = companyCode, 
+                CopyType = PoCopyType.Original 
+            };
+            var printData = await _mediator.Send(query);
 
             if (printData == null)
             {
@@ -230,11 +234,14 @@ public class CustomerPoController : ControllerBase
 
             foreach (var poRequest in request.Pos)
             {
-                var printData = await _repository.GetPrintDataAsync(
-                    poRequest.PoCode, 
-                    request.CompanyId,
-                    request.CompanyId, // Pass companyCode (same as companyId for now)
-                    PoCopyType.Original);
+                var query = new GetCustomerPoPrintDataQuery 
+                { 
+                    PoCode = poRequest.PoCode, 
+                    CompanyId = request.CompanyId,
+                    CompanyCode = request.CompanyId, // Pass companyCode (same as companyId for now)
+                    CopyType = PoCopyType.Original 
+                };
+                var printData = await _mediator.Send(query);
                 
                 if (printData != null)
                 {

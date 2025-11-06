@@ -1,4 +1,5 @@
-using ErpBE.Application.Interfaces;
+using ErpBE.Application.Auth.Queries;
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ErpBE.API.Controllers.Auth
@@ -7,11 +8,11 @@ namespace ErpBE.API.Controllers.Auth
     [Route("api/[controller]")]
     public class FinancialYearController : ControllerBase
     {
-        private readonly IFinancialYearRepository _financialYearRepository;
+        private readonly IMediator _mediator;
 
-        public FinancialYearController(IFinancialYearRepository financialYearRepository)
+        public FinancialYearController(IMediator mediator)
         {
-            _financialYearRepository = financialYearRepository;
+            _mediator = mediator;
         }
 
         /// <summary>
@@ -24,7 +25,8 @@ namespace ErpBE.API.Controllers.Auth
         {
             try
             {
-                var financialYears = await _financialYearRepository.GetFinancialYearsByCompanyIdAsync(companyId);
+                var query = new GetFinancialYearsQuery { CompanyId = companyId };
+                var financialYears = await _mediator.Send(query);
                 return Ok(financialYears);
             }
             catch (Exception ex)

@@ -7,17 +7,12 @@ namespace ErpBE.Application.UnitMaster.Validators
 {
     public class GetUnitMasterByIdValidator : AbstractValidator<GetUnitMasterByIdQuery>
     {
-        private readonly IUnitMasterRepository _repository;
-
-        public GetUnitMasterByIdValidator(IUnitMasterRepository repository)
+        public GetUnitMasterByIdValidator()
         {
-            _repository = repository;
-
+            // Only validate that ID is not zero
+            // Existence check should be done by the handler, which can return null for non-existent IDs
             RuleFor(x => x.Id)
-                .NotZero("Unit ID")
-                .MustAsync(async (id, cancellation) => 
-                    await _repository.GetUnitMasterByIdAsync(id) != null)
-                .WithMessage(x => $"Unit master with ID '{x.Id}' not found.");
+                .NotZero("Unit ID");
         }
     }
 }

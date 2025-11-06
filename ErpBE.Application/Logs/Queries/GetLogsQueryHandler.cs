@@ -17,12 +17,15 @@ namespace ErpBE.Application.Logs.Queries
         {
             var parameters = request.QueryParameters;
 
+            // Normalize page number - must be at least 1
+            var actualPageNumber = parameters.PageNumber <= 0 ? 1 : parameters.PageNumber;
+
             // Cap page size at 100 to match stored procedure behavior
             // If pageSize is 0 or negative, default to 50
             var actualPageSize = parameters.PageSize <= 0 ? 50 : Math.Min(parameters.PageSize, 100);
 
             var (logs, totalCount) = await _logsRepository.GetLogsAsync(
-                parameters.PageNumber,
+                actualPageNumber,
                 actualPageSize,
                 parameters.Level,
                 parameters.SearchTerm,
@@ -48,11 +51,11 @@ namespace ErpBE.Application.Logs.Queries
             {
                 Data = logDtos,
                 TotalCount = totalCount,
-                PageNumber = parameters.PageNumber,
+                PageNumber = actualPageNumber,
                 PageSize = actualPageSize,
                 TotalPages = totalPages,
-                HasPreviousPage = parameters.PageNumber > 1,
-                HasNextPage = parameters.PageNumber < totalPages
+                HasPreviousPage = actualPageNumber > 1,
+                HasNextPage = actualPageNumber < totalPages
             };
         }
     }

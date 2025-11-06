@@ -367,7 +367,8 @@ namespace ErpBE.Application.UserManagement
                 var role = await _userRepository.GetRoleByIdAsync(roleId);
                 if (role == null)
                 {
-                    throw new InvalidOperationException($"Role with ID {roleId} not found");
+                    // Return false if role not found instead of throwing exception
+                    return false;
                 }
 
                 var success = await _userRepository.DeleteRoleAsync(roleId);

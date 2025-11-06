@@ -2,30 +2,30 @@ using ErpBE.Application.CustomerTypeMaster.Validators;
 using ErpBE.Application.DTOs;
 using ErpBE.Application.Interfaces;
 using FluentAssertions;
-using Moq;
+using NSubstitute;
 using Xunit;
 
 namespace ErpBE.Tests.Validators
 {
     public class UpdateCustomerTypeMasterRequestValidatorTests
     {
-        private readonly Mock<ICustomerTypeMasterRepository> _mockRepository;
+        private readonly ICustomerTypeMasterRepository _mockRepository;
         private readonly UpdateCustomerTypeMasterRequestValidator _validator;
 
         public UpdateCustomerTypeMasterRequestValidatorTests()
         {
-            _mockRepository = new Mock<ICustomerTypeMasterRepository>();
-            _validator = new UpdateCustomerTypeMasterRequestValidator(_mockRepository.Object);
+            _mockRepository = Substitute.For<ICustomerTypeMasterRepository>();
+            _validator = new UpdateCustomerTypeMasterRequestValidator(_mockRepository);
         }
 
         [Fact]
         public async Task Validate_WithValidRequest_ShouldPass()
         {
             // Arrange
-            _mockRepository.Setup(x => x.GetByIdAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new CustomerTypeMasterDto { Id = 1 });
-            _mockRepository.Setup(x => x.IsTypeCodeUniqueAsync(It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(true);
+            _mockRepository.GetByIdAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
+                .Returns(new CustomerTypeMasterDto { Id = 1 });
+            _mockRepository.IsTypeCodeUniqueAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+                .Returns(true);
 
             var request = new UpdateCustomerTypeMasterRequest
             {
@@ -47,8 +47,8 @@ namespace ErpBE.Tests.Validators
         public async Task Validate_WithNonExistentId_ShouldFail()
         {
             // Arrange
-            _mockRepository.Setup(x => x.GetByIdAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync((CustomerTypeMasterDto?)null);
+            _mockRepository.GetByIdAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
+                .Returns((CustomerTypeMasterDto?)null);
 
             var request = new UpdateCustomerTypeMasterRequest
             {
@@ -71,8 +71,8 @@ namespace ErpBE.Tests.Validators
         public async Task Validate_WithZeroCompanyId_ShouldFail()
         {
             // Arrange
-            _mockRepository.Setup(x => x.GetByIdAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new CustomerTypeMasterDto { Id = 1 });
+            _mockRepository.GetByIdAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
+                .Returns(new CustomerTypeMasterDto { Id = 1 });
 
             var request = new UpdateCustomerTypeMasterRequest
             {
@@ -95,8 +95,8 @@ namespace ErpBE.Tests.Validators
         public async Task Validate_WithEmptyTypeCode_ShouldFail()
         {
             // Arrange
-            _mockRepository.Setup(x => x.GetByIdAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new CustomerTypeMasterDto { Id = 1 });
+            _mockRepository.GetByIdAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
+                .Returns(new CustomerTypeMasterDto { Id = 1 });
 
             var request = new UpdateCustomerTypeMasterRequest
             {
@@ -119,10 +119,10 @@ namespace ErpBE.Tests.Validators
         public async Task Validate_WithDuplicateTypeCode_ShouldFail()
         {
             // Arrange
-            _mockRepository.Setup(x => x.GetByIdAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new CustomerTypeMasterDto { Id = 1 });
-            _mockRepository.Setup(x => x.IsTypeCodeUniqueAsync(It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(false);
+            _mockRepository.GetByIdAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
+                .Returns(new CustomerTypeMasterDto { Id = 1 });
+            _mockRepository.IsTypeCodeUniqueAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+                .Returns(false);
 
             var request = new UpdateCustomerTypeMasterRequest
             {
@@ -145,8 +145,8 @@ namespace ErpBE.Tests.Validators
         public async Task Validate_WithEmptyTypeDescription_ShouldFail()
         {
             // Arrange
-            _mockRepository.Setup(x => x.GetByIdAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new CustomerTypeMasterDto { Id = 1 });
+            _mockRepository.GetByIdAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
+                .Returns(new CustomerTypeMasterDto { Id = 1 });
 
             var request = new UpdateCustomerTypeMasterRequest
             {
@@ -169,10 +169,10 @@ namespace ErpBE.Tests.Validators
         public async Task Validate_WithMismatchedFirstLetter_ShouldFail()
         {
             // Arrange
-            _mockRepository.Setup(x => x.GetByIdAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new CustomerTypeMasterDto { Id = 1 });
-            _mockRepository.Setup(x => x.IsTypeCodeUniqueAsync(It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(true);
+            _mockRepository.GetByIdAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
+                .Returns(new CustomerTypeMasterDto { Id = 1 });
+            _mockRepository.IsTypeCodeUniqueAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+                .Returns(true);
 
             var request = new UpdateCustomerTypeMasterRequest
             {

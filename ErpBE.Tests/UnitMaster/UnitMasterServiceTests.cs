@@ -8,24 +8,24 @@ using ErpBE.Application.Common.Models;
 using ErpBE.Application.Audit;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
-using Moq;
+using NSubstitute;
 using Xunit;
 
 namespace ErpBE.Tests.UnitMaster
 {
     public class UnitMasterServiceTests
     {
-        private readonly Mock<IUnitMasterRepository> _mockRepository;
-        private readonly Mock<ILogger<UnitMasterService>> _mockLogger;
-        private readonly Mock<IAuditService> _mockAuditService;
+        private readonly IUnitMasterRepository _mockRepository;
+        private readonly ILogger<UnitMasterService> _mockLogger;
+        private readonly IAuditService _mockAuditService;
         private readonly UnitMasterService _service;
 
         public UnitMasterServiceTests()
         {
-            _mockRepository = new Mock<IUnitMasterRepository>();
-            _mockLogger = new Mock<ILogger<UnitMasterService>>();
-            _mockAuditService = new Mock<IAuditService>();
-            _service = new UnitMasterService(_mockRepository.Object, _mockLogger.Object, _mockAuditService.Object);
+            _mockRepository = Substitute.For<IUnitMasterRepository>();
+            _mockLogger = Substitute.For<ILogger<UnitMasterService>>();
+            _mockAuditService = Substitute.For<IAuditService>();
+            _service = new UnitMasterService(_mockRepository, _mockLogger, _mockAuditService);
         }
 
         [Fact]
@@ -42,15 +42,15 @@ namespace ErpBE.Tests.UnitMaster
 
             var expectedUnitId = 123;
             // Service no longer validates - that's done in FluentValidation
-            _mockRepository.Setup(x => x.CreateUnitMasterAsync(request))
-                          .ReturnsAsync(expectedUnitId);
+            _mockRepository.CreateUnitMasterAsync(request)
+                          .Returns(expectedUnitId);
             // Setup audit service (can't use Verify due to optional parameters in interface)
-            _mockAuditService.Setup(x => x.LogCreateAsync(
-                It.IsAny<string>(), 
-                It.IsAny<int>(), 
-                It.IsAny<object>(), 
-                It.IsAny<string>(),
-                null, null, null))
+            _mockAuditService.LogCreateAsync(
+                Arg.Any<string>(), 
+                Arg.Any<int>(), 
+                Arg.Any<object>(), 
+                Arg.Any<string>(),
+                null, null, null)
                             .Returns(Task.CompletedTask);
 
             // Act
@@ -58,9 +58,14 @@ namespace ErpBE.Tests.UnitMaster
 
             // Assert
             result.Should().Be(expectedUnitId);
-            _mockRepository.Verify(x => x.CreateUnitMasterAsync(request), Times.Once);
+            await _mockRepository.Received(1).CreateUnitMasterAsync(request);
             // Verify audit service was called
-            _mockAuditService.VerifyAll();
+            await _mockAuditService.Received().LogCreateAsync(
+                Arg.Any<string>(), 
+                Arg.Any<int>(), 
+                Arg.Any<object>(), 
+                Arg.Any<string>(),
+                null, null, null);
         }
 
         // NOTE: Validation is now handled by FluentValidation in the MediatR pipeline
@@ -80,8 +85,8 @@ namespace ErpBE.Tests.UnitMaster
                 IsActive = true
             };
 
-            _mockRepository.Setup(x => x.GetUnitMasterByIdAsync(unitId))
-                          .ReturnsAsync(expectedUnit);
+            _mockRepository.GetUnitMasterByIdAsync(unitId)
+                          .Returns(expectedUnit);
 
             // Act
             var result = await _service.GetUnitMasterByIdAsync(unitId);
@@ -90,7 +95,7 @@ namespace ErpBE.Tests.UnitMaster
             result.Should().NotBeNull();
             result!.Id.Should().Be(unitId);
             result!.UnitName.Should().Be("TEST_UNIT");
-            _mockRepository.Verify(x => x.GetUnitMasterByIdAsync(unitId), Times.Once);
+            await _mockRepository.Received(1).GetUnitMasterByIdAsync(unitId);
         }
 
         [Fact]
@@ -117,8 +122,8 @@ namespace ErpBE.Tests.UnitMaster
                 PageSize = 10
             };
 
-            _mockRepository.Setup(x => x.GetUnitMastersAsync(queryParameters))
-                          .ReturnsAsync(expectedResponse);
+            _mockRepository.GetUnitMastersAsync(queryParameters)
+                          .Returns(expectedResponse);
 
             // Act
             var result = await _service.GetUnitMastersAsync(queryParameters);
@@ -127,7 +132,7 @@ namespace ErpBE.Tests.UnitMaster
             result.Should().NotBeNull();
             result!.TotalCount.Should().Be(2);
             result!.Data.Should().HaveCount(2);
-            _mockRepository.Verify(x => x.GetUnitMastersAsync(queryParameters), Times.Once);
+            await _mockRepository.Received(1).GetUnitMastersAsync(queryParameters);
         }
 
         [Fact]
@@ -137,15 +142,15 @@ namespace ErpBE.Tests.UnitMaster
             var unitId = 123;
             var isActive = false;
 
-            _mockRepository.Setup(x => x.SetUnitMasterActiveStatusAsync(unitId, isActive))
-                          .ReturnsAsync(true);
+            _mockRepository.SetUnitMasterActiveStatusAsync(unitId, isActive)
+                          .Returns(true);
 
             // Act
             var result = await _service.SetUnitMasterActiveStatusAsync(unitId, isActive);
 
             // Assert
             result.Should().BeTrue();
-            _mockRepository.Verify(x => x.SetUnitMasterActiveStatusAsync(unitId, isActive), Times.Once);
+            await _mockRepository.Received(1).SetUnitMasterActiveStatusAsync(unitId, isActive);
         }
     }
 }

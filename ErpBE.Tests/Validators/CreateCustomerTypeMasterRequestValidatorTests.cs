@@ -2,28 +2,28 @@ using ErpBE.Application.CustomerTypeMaster.Validators;
 using ErpBE.Application.DTOs;
 using ErpBE.Application.Interfaces;
 using FluentAssertions;
-using Moq;
+using NSubstitute;
 using Xunit;
 
 namespace ErpBE.Tests.Validators
 {
     public class CreateCustomerTypeMasterRequestValidatorTests
     {
-        private readonly Mock<ICustomerTypeMasterRepository> _mockRepository;
+        private readonly ICustomerTypeMasterRepository _mockRepository;
         private readonly CreateCustomerTypeMasterRequestValidator _validator;
 
         public CreateCustomerTypeMasterRequestValidatorTests()
         {
-            _mockRepository = new Mock<ICustomerTypeMasterRepository>();
-            _validator = new CreateCustomerTypeMasterRequestValidator(_mockRepository.Object);
+            _mockRepository = Substitute.For<ICustomerTypeMasterRepository>();
+            _validator = new CreateCustomerTypeMasterRequestValidator(_mockRepository);
         }
 
         [Fact]
         public async Task Validate_WithValidRequest_ShouldPass()
         {
             // Arrange
-            _mockRepository.Setup(x => x.IsTypeCodeUniqueAsync(It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(true);
+            _mockRepository.IsTypeCodeUniqueAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+                .Returns(true);
 
             var request = new CreateCustomerTypeMasterRequest
             {
@@ -104,8 +104,8 @@ namespace ErpBE.Tests.Validators
         public async Task Validate_WithDuplicateTypeCode_ShouldFail()
         {
             // Arrange
-            _mockRepository.Setup(x => x.IsTypeCodeUniqueAsync(It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(false);
+            _mockRepository.IsTypeCodeUniqueAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+                .Returns(false);
 
             var request = new CreateCustomerTypeMasterRequest
             {
@@ -187,8 +187,8 @@ namespace ErpBE.Tests.Validators
         public async Task Validate_WithMismatchedFirstLetter_ShouldFail()
         {
             // Arrange
-            _mockRepository.Setup(x => x.IsTypeCodeUniqueAsync(It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(true);
+            _mockRepository.IsTypeCodeUniqueAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+                .Returns(true);
 
             var request = new CreateCustomerTypeMasterRequest
             {
@@ -210,8 +210,8 @@ namespace ErpBE.Tests.Validators
         public async Task Validate_WithCaseInsensitiveFirstLetterMatch_ShouldPass()
         {
             // Arrange
-            _mockRepository.Setup(x => x.IsTypeCodeUniqueAsync(It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(true);
+            _mockRepository.IsTypeCodeUniqueAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+                .Returns(true);
 
             var request = new CreateCustomerTypeMasterRequest
             {

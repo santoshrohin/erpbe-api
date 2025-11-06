@@ -7,17 +7,12 @@ namespace ErpBE.Application.UnitMaster.Validators
 {
     public class DeleteUnitMasterValidator : AbstractValidator<DeleteUnitMasterCommand>
     {
-        private readonly IUnitMasterRepository _repository;
-
-        public DeleteUnitMasterValidator(IUnitMasterRepository repository)
+        public DeleteUnitMasterValidator()
         {
-            _repository = repository;
-
+            // Only validate that ID is not zero
+            // Existence check should be done by the handler, which can return false for non-existent IDs
             RuleFor(x => x.Id)
-                .NotZero("Unit ID")
-                .MustAsync(async (id, cancellation) => 
-                    await _repository.GetUnitMasterByIdAsync(id) != null)
-                .WithMessage(x => $"Unit with ID '{x.Id}' not found.");
+                .NotZero("Unit ID");
         }
     }
 }

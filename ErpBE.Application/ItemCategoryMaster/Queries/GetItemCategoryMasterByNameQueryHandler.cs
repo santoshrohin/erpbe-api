@@ -17,11 +17,8 @@ namespace ErpBE.Application.ItemCategoryMaster.Queries
         {
             var category = await _repository.GetByNameAsync(request.CategoryName, request.CompanyId);
             
-            if (category == null)
-            {
-                throw new KeyNotFoundException($"Item Category with name '{request.CategoryName}' not found for company {request.CompanyId}.");
-            }
-            
+            // Return null if not found instead of throwing exception
+            // This allows the caller to handle the case gracefully
             return category;
         }
     }

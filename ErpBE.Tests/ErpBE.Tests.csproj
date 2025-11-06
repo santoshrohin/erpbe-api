@@ -21,10 +21,12 @@
     <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="9.0.0" />
     <PackageReference Include="FluentAssertions" Version="6.12.0" />
-    <PackageReference Include="Moq" Version="4.20.70" />
+    <PackageReference Include="NSubstitute" Version="5.1.0" />
     <PackageReference Include="AutoFixture" Version="4.18.1" />
     <PackageReference Include="AutoFixture.Xunit2" Version="4.18.1" />
     <PackageReference Include="NetArchTest.Rules" Version="1.3.2" />
+    <PackageReference Include="Testcontainers.MsSql" Version="3.11.0" />
+    <PackageReference Include="Respawn" Version="6.2.1" />
   </ItemGroup>
 
   <ItemGroup>
@@ -36,6 +38,12 @@
     <ProjectReference Include="..\ErpBE.Application\ErpBE.Application.csproj" />
     <ProjectReference Include="..\ErpBE.Domain\ErpBE.Domain.csproj" />
     <ProjectReference Include="..\ErpBE.Infrastructure\ErpBE.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

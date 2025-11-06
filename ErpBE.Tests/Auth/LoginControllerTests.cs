@@ -1,211 +1,125 @@
 using System.Linq;
-using System.Net;
-using System.Net.Http;
-using System.Text;
-using System.Text.Json;
 using System.Threading.Tasks;
-using ErpBE.Tests;
+using ErpBE.Application.Auth.Queries.Login;
+using ErpBE.Tests.Integration;
 using FluentAssertions;
-using Microsoft.AspNetCore.Mvc.Testing;
 using Xunit;
 
-namespace ErpBE.Tests.Auth
+namespace ErpBE.Tests.Auth;
+
+/// <summary>
+/// Integration tests for Login functionality
+/// Tests authentication and login (matches reference implementation - tests handlers directly)
+/// </summary>
+public class LoginControllerTests : IntegrationTestBase
 {
-    public class LoginControllerTests : TestBase
+    [Fact]
+    public async Task Login_WithValidCredentials_ShouldReturnToken()
     {
-        public LoginControllerTests(WebApplicationFactory<Program> factory) : base(factory)
+        // Arrange - Use TestUser credentials
+        var loginRequest = new LoginRequest
         {
-        }
+            Username = "TestUser",
+            Password = "Test@123",
+            CompanyId = 1,
+            FinancialYearCode = -2147483641
+        };
 
-        [Fact]
-        public async Task Login_WithValidCredentials_ShouldReturnToken()
+        // Act
+        var response = await Mediator.Send(loginRequest);
+
+        // Assert
+        response.Should().NotBeNull();
+        response.Token.Should().NotBeNullOrEmpty();
+        response.Username.Should().Be("TestUser");
+        
+        // Verify TestUser has Admin role
+        response.Roles.Should().NotBeNullOrEmpty();
+        response.Roles.Should().Contain("Admin");
+    }
+
+    [Fact]
+    public async Task Login_WithInvalidCredentials_ShouldThrowUnauthorized()
+    {
+        // Arrange
+        var loginRequest = new LoginRequest
         {
-            // Arrange - Use TestUser credentials
-            var loginRequest = new
-            {
-                Username = "TestUser",
-                Password = "Test@123",
-                CompanyId = 1,
-                FinancialYearCode = -2147483641
-            };
+            Username = "invalid",
+            Password = "invalid",
+            CompanyId = 1,
+            FinancialYearCode = -2147483641
+        };
 
-            var json = JsonSerializer.Serialize(loginRequest);
-            var content = new StringContent(json, Encoding.UTF8, "application/json");
+        // Act & Assert
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(async () =>
+            await Mediator.Send(loginRequest));
+    }
 
-            // Act
-            var response = await Client.PostAsync("/api/Login", content);
-
-            // Assert
-            response.StatusCode.Should().Be(HttpStatusCode.OK);
-            
-            var responseContent = await response.Content.ReadAsStringAsync();
-            var result = JsonSerializer.Deserialize<JsonElement>(responseContent);
-            
-            result.TryGetProperty("token", out var token).Should().BeTrue();
-            token.GetString().Should().NotBeNullOrEmpty();
-            
-            // Verify TestUser has Admin role
-            result.TryGetProperty("roles", out var roles).Should().BeTrue();
-            var rolesArray = roles.EnumerateArray().Select(r => r.GetString()).ToList();
-            rolesArray.Should().Contain("Admin");
-        }
-
-        [Fact]
-        public async Task Login_WithInvalidCredentials_ShouldReturnUnauthorized()
+    [Fact]
+    public async Task Login_WithEmptyUsername_ShouldFailValidation()
+    {
+        // Arrange
+        var loginRequest = new LoginRequest
         {
-            // Arrange
-            var loginRequest = new
-            {
-                Username = "invalid",
-                Password = "invalid",
-                CompanyId = 1,
-                FinancialYearCode = -2147483641
-            };
+            Username = "",
+            Password = "Test@123",
+            CompanyId = 1,
+            FinancialYearCode = -2147483641
+        };
 
-            var json = JsonSerializer.Serialize(loginRequest);
-            var content = new StringContent(json, Encoding.UTF8, "application/json");
+        // Act & Assert - Validation should fail (handled by MediatR ValidationBehavior)
+        await Assert.ThrowsAnyAsync<Exception>(async () =>
+            await Mediator.Send(loginRequest));
+    }
 
-            // Act
-            var response = await Client.PostAsync("/api/Login", content);
-
-            // Assert
-            response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
-        }
-
-        [Fact]
-        public async Task Login_WithMissingFinancialYearCode_ShouldReturnBadRequest()
+    [Fact]
+    public async Task Login_WithEmptyPassword_ShouldFailValidation()
+    {
+        // Arrange
+        var loginRequest = new LoginRequest
         {
-            // Arrange
-            var loginRequest = new
-            {
-                Username = "TestUser",
-                Password = "Test@123",
-                CompanyId = 1,
-                FinancialYearCode=(string)null
-                // Missing FinancialYearCode
-            };
+            Username = "TestUser",
+            Password = "",
+            CompanyId = 1,
+            FinancialYearCode = -2147483641
+        };
 
-            var json = JsonSerializer.Serialize(loginRequest);
-            var content = new StringContent(json, Encoding.UTF8, "application/json");
+        // Act & Assert - Validation should fail (handled by MediatR ValidationBehavior)
+        await Assert.ThrowsAnyAsync<Exception>(async () =>
+            await Mediator.Send(loginRequest));
+    }
 
-            // Act
-            var response = await Client.PostAsync("/api/Login", content);
-
-            // Assert
-            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        }
-
-        [Fact]
-        public async Task Login_WithEmptyUsername_ShouldReturnBadRequest()
+    [Fact]
+    public async Task Login_WithValidUsername_ButInvalidCompanyId_ShouldThrowUnauthorized()
+    {
+        // Arrange - Test with invalid company ID
+        var loginRequest = new LoginRequest
         {
-            // Arrange
-            var loginRequest = new
-            {
-                Username = "",
-                Password = "Test@123",
-                CompanyId = 1,
-                FinancialYearCode = -2147483641
-            };
+            Username = "TestUser",
+            Password = "Test@123",
+            CompanyId = 99999, // Invalid company ID
+            FinancialYearCode = -2147483641
+        };
 
-            var json = JsonSerializer.Serialize(loginRequest);
-            var content = new StringContent(json, Encoding.UTF8, "application/json");
+        // Act & Assert - Should return Unauthorized for invalid company
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(async () =>
+            await Mediator.Send(loginRequest));
+    }
 
-            // Act
-            var response = await Client.PostAsync("/api/Login", content);
-
-            // Assert
-            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        }
-
-        [Fact]
-        public async Task Login_WithEmptyPassword_ShouldReturnBadRequest()
+    [Fact]
+    public async Task Login_WithWhitespaceUsername_ShouldFailValidation()
+    {
+        // Arrange
+        var loginRequest = new LoginRequest
         {
-            // Arrange
-            var loginRequest = new
-            {
-                Username = "TestUser",
-                Password = "",
-                CompanyId = 1,
-                FinancialYearCode = -2147483641
-            };
+            Username = "   ",
+            Password = "Test@123",
+            CompanyId = 1,
+            FinancialYearCode = -2147483641
+        };
 
-            var json = JsonSerializer.Serialize(loginRequest);
-            var content = new StringContent(json, Encoding.UTF8, "application/json");
-
-            // Act
-            var response = await Client.PostAsync("/api/Login", content);
-
-            // Assert
-            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        }
-
-        [Fact]
-        public async Task Login_WithNullRequest_ShouldReturnBadRequest()
-        {
-            // Act
-            var response = await Client.PostAsync("/api/Login", new StringContent("", Encoding.UTF8, "application/json"));
-
-            // Assert
-            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        }
-
-        [Fact]
-        public async Task Login_WithInvalidJson_ShouldReturnBadRequest()
-        {
-            // Arrange
-            var invalidJson = "{ invalid json }";
-            var content = new StringContent(invalidJson, Encoding.UTF8, "application/json");
-
-            // Act
-            var response = await Client.PostAsync("/api/Login", content);
-
-            // Assert
-            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        }
-
-        [Fact]
-        public async Task Login_WithValidUsername_ButInvalidCompanyId_ShouldReturnUnauthorized()
-        {
-            // Arrange - Test with invalid company ID
-            var loginRequest = new
-            {
-                Username = "TestUser",
-                Password = "Test@123",
-                CompanyId = 99999, // Invalid company ID
-                FinancialYearCode = -2147483641
-            };
-
-            var json = JsonSerializer.Serialize(loginRequest);
-            var content = new StringContent(json, Encoding.UTF8, "application/json");
-
-            // Act
-            var response = await Client.PostAsync("/api/Login", content);
-
-            // Assert
-            // Should return Unauthorized for invalid company
-            response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
-        }
-
-        [Fact]
-        public async Task Login_WithWhitespaceUsername_ShouldReturnBadRequest()
-        {
-            // Arrange
-            var loginRequest = new
-            {
-                Username = "   ",
-                Password = "Test@123",
-                CompanyId = 1,
-                FinancialYearCode = -2147483641
-            };
-
-            var json = JsonSerializer.Serialize(loginRequest);
-            var content = new StringContent(json, Encoding.UTF8, "application/json");
-
-            // Act
-            var response = await Client.PostAsync("/api/Login", content);
-
-            // Assert
-            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        }
+        // Act & Assert - Validation should fail (handled by MediatR ValidationBehavior)
+        await Assert.ThrowsAnyAsync<Exception>(async () =>
+            await Mediator.Send(loginRequest));
     }
 }

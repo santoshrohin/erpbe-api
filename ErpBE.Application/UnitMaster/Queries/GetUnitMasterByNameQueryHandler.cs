@@ -17,11 +17,8 @@ namespace ErpBE.Application.UnitMaster.Queries
         {
             var unit = await _repository.GetUnitMasterByNameAsync(request.UnitName, request.CompanyId);
             
-            if (unit == null)
-            {
-                throw new KeyNotFoundException($"Unit master with name '{request.UnitName}' not found for company {request.CompanyId}.");
-            }
-            
+            // Return null if not found instead of throwing exception
+            // This allows the caller to handle the case gracefully
             return unit;
         }
     }

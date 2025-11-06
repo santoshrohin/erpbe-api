@@ -29,7 +29,8 @@ namespace ErpBE.Application.TaxInvoice.Handlers
                 var existingInvoice = await _repository.GetTaxInvoiceByIdAsync(request.InvoiceCode, request.CompanyCode);
                 if (existingInvoice == null)
                 {
-                    throw new KeyNotFoundException($"Tax Invoice with code {request.InvoiceCode} not found.");
+                    // Return false if invoice not found instead of throwing exception
+                    return false;
                 }
 
                 // 2. Check if invoice is locked

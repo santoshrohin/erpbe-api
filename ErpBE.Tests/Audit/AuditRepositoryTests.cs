@@ -1,15 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Data.SqlClient;
 using System.Linq;
 using System.Threading.Tasks;
-using Dapper;
 using ErpBE.Application.Audit.Models;
 using ErpBE.Application.DTOs;
-using ErpBE.Infrastructure.Repositories;
+using ErpBE.Application.Interfaces;
+using ErpBE.Tests.Integration;
 using FluentAssertions;
-using Microsoft.Extensions.Configuration;
 using Xunit;
 
 namespace ErpBE.Tests.Audit
@@ -17,24 +15,18 @@ namespace ErpBE.Tests.Audit
     /// <summary>
     /// Integration tests for AuditRepository
     /// Tests audit entry creation, retrieval, and configuration management
+    /// Tests use IntegrationTestBase to use test database (matches reference implementation)
     /// </summary>
-    public class AuditRepositoryTests : IDisposable
+    public class AuditRepositoryTests : IntegrationTestBase
     {
-        private readonly IDbConnection _connection;
-        private readonly AuditRepository _repository;
+        private IAuditRepository _repository;
         private readonly List<int> _createdAuditIds = new();
         private readonly List<int> _createdConfigIds = new();
 
-        public AuditRepositoryTests()
+        public override async Task InitializeAsync()
         {
-            var configuration = new ConfigurationBuilder()
-                .SetBasePath(AppContext.BaseDirectory)
-                .AddJsonFile("appsettings.json", optional: false)
-                .Build();
-
-            var connectionString = configuration.GetConnectionString("DefaultConnection");
-            _connection = new SqlConnection(connectionString);
-            _repository = new AuditRepository(_connection);
+            await base.InitializeAsync();
+            _repository = GetService<IAuditRepository>();
         }
 
         [Fact]
@@ -64,7 +56,7 @@ namespace ErpBE.Tests.Audit
             var id = await _repository.CreateAsync(auditEntry);
 
             // Assert
-            id.Should().BeGreaterThan(0);
+            id.Should().NotBe(0); // IDENTITY starts from -2147483648, so IDs can be negative
             _createdAuditIds.Add(id);
         }
 
@@ -284,7 +276,7 @@ namespace ErpBE.Tests.Audit
             var id = await _repository.CreateConfigurationAsync(config);
 
             // Assert
-            id.Should().BeGreaterThan(0);
+            id.Should().NotBe(0); // IDENTITY starts from -2147483648, so IDs can be negative
             _createdConfigIds.Add(id);
         }
 
@@ -461,44 +453,7 @@ namespace ErpBE.Tests.Audit
             result.Data.Should().Contain(x => x.EntityName == "DateRangeTest");
         }
 
-        public void Dispose()
-        {
-            // Cleanup - Delete created audit entries and configurations
-            try
-            {
-                foreach (var id in _createdAuditIds)
-                {
-                    try
-                    {
-                        _connection.Execute(
-                            "DELETE FROM AUDIT_TRAIL WHERE AUDIT_ID = @Id",
-                            new { Id = id });
-                    }
-                    catch
-                    {
-                        // Ignore cleanup errors
-                    }
-                }
-
-                foreach (var id in _createdConfigIds)
-                {
-                    try
-                    {
-                        _connection.Execute(
-                            "DELETE FROM AUDIT_CONFIGURATION WHERE Id = @Id",
-                            new { Id = id });
-                    }
-                    catch
-                    {
-                        // Ignore cleanup errors
-                    }
-                }
-            }
-            finally
-            {
-                _connection?.Dispose();
-            }
-        }
+        // Cleanup is handled by IntegrationTestBase via Respawner
     }
 }
 

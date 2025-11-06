@@ -1,4 +1,5 @@
-using ErpBE.Application.Interfaces;
+using ErpBE.Application.Auth.Queries;
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ErpBE.API.Controllers.Auth
@@ -7,11 +8,11 @@ namespace ErpBE.API.Controllers.Auth
     [Route("api/[controller]")]
     public class CompanyController : ControllerBase
     {
-        private readonly ICompanyRepository _companyRepository;
+        private readonly IMediator _mediator;
 
-        public CompanyController(ICompanyRepository companyRepository)
+        public CompanyController(IMediator mediator)
         {
-            _companyRepository = companyRepository;
+            _mediator = mediator;
         }
 
         /// <summary>
@@ -23,7 +24,8 @@ namespace ErpBE.API.Controllers.Auth
         {
             try
             {
-                var companies = await _companyRepository.GetActiveCompaniesAsync();
+                var query = new GetCompaniesQuery();
+                var companies = await _mediator.Send(query);
                 return Ok(companies);
             }
             catch (Exception ex)

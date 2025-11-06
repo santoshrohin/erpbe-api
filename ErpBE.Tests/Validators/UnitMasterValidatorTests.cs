@@ -4,7 +4,7 @@ using ErpBE.Application.DTOs;
 using ErpBE.Application.Interfaces;
 using FluentAssertions;
 using FluentValidation.TestHelper;
-using Moq;
+using NSubstitute;
 using Xunit;
 
 namespace ErpBE.Tests.Validators
@@ -15,11 +15,11 @@ namespace ErpBE.Tests.Validators
     /// </summary>
     public class UnitMasterValidatorTests
     {
-        private readonly Mock<IUnitMasterRepository> _mockRepository;
+        private readonly IUnitMasterRepository _mockRepository;
 
         public UnitMasterValidatorTests()
         {
-            _mockRepository = new Mock<IUnitMasterRepository>();
+            _mockRepository = Substitute.For<IUnitMasterRepository>();
         }
 
         #region CreateUnitMasterValidator Tests
@@ -28,9 +28,9 @@ namespace ErpBE.Tests.Validators
         public async Task CreateValidator_WithValidData_ShouldNotHaveValidationErrors()
         {
             // Arrange
-            var validator = new CreateUnitMasterValidator(_mockRepository.Object);
-            _mockRepository.Setup(x => x.IsUnitNameUniqueAsync(It.IsAny<string>(), It.IsAny<int>(), null))
-                .ReturnsAsync(true);
+            var validator = new CreateUnitMasterValidator(_mockRepository);
+            _mockRepository.IsUnitNameUniqueAsync(Arg.Any<string>(), Arg.Any<int>(), null)
+                .Returns(true);
 
             var request = new CreateUnitMasterRequest
             {
@@ -51,7 +51,7 @@ namespace ErpBE.Tests.Validators
         public async Task CreateValidator_WithEmptyUnitName_ShouldHaveValidationError()
         {
             // Arrange
-            var validator = new CreateUnitMasterValidator(_mockRepository.Object);
+            var validator = new CreateUnitMasterValidator(_mockRepository);
             var request = new CreateUnitMasterRequest
             {
                 UnitName = "",
@@ -72,7 +72,7 @@ namespace ErpBE.Tests.Validators
         public async Task CreateValidator_WithNullUnitName_ShouldHaveValidationError()
         {
             // Arrange
-            var validator = new CreateUnitMasterValidator(_mockRepository.Object);
+            var validator = new CreateUnitMasterValidator(_mockRepository);
             var request = new CreateUnitMasterRequest
             {
                 UnitName = null!,
@@ -92,7 +92,7 @@ namespace ErpBE.Tests.Validators
         public async Task CreateValidator_WithTooLongUnitName_ShouldHaveValidationError()
         {
             // Arrange
-            var validator = new CreateUnitMasterValidator(_mockRepository.Object);
+            var validator = new CreateUnitMasterValidator(_mockRepository);
             var request = new CreateUnitMasterRequest
             {
                 UnitName = "VERYLONGNAME", // More than 10 chars
@@ -113,7 +113,7 @@ namespace ErpBE.Tests.Validators
         public async Task CreateValidator_WithSpecialCharactersInUnitName_ShouldHaveValidationError()
         {
             // Arrange
-            var validator = new CreateUnitMasterValidator(_mockRepository.Object);
+            var validator = new CreateUnitMasterValidator(_mockRepository);
             var request = new CreateUnitMasterRequest
             {
                 UnitName = "KG@#$",
@@ -134,9 +134,9 @@ namespace ErpBE.Tests.Validators
         public async Task CreateValidator_WithDuplicateUnitName_ShouldHaveValidationError()
         {
             // Arrange
-            var validator = new CreateUnitMasterValidator(_mockRepository.Object);
-            _mockRepository.Setup(x => x.IsUnitNameUniqueAsync("KG", 1, null))
-                .ReturnsAsync(false); // Name already exists
+            var validator = new CreateUnitMasterValidator(_mockRepository);
+            _mockRepository.IsUnitNameUniqueAsync("KG", 1, null)
+                .Returns(false); // Name already exists
 
             var request = new CreateUnitMasterRequest
             {
@@ -158,9 +158,9 @@ namespace ErpBE.Tests.Validators
         public async Task CreateValidator_WithTooLongDescription_ShouldHaveValidationError()
         {
             // Arrange
-            var validator = new CreateUnitMasterValidator(_mockRepository.Object);
-            _mockRepository.Setup(x => x.IsUnitNameUniqueAsync(It.IsAny<string>(), It.IsAny<int>(), null))
-                .ReturnsAsync(true);
+            var validator = new CreateUnitMasterValidator(_mockRepository);
+            _mockRepository.IsUnitNameUniqueAsync(Arg.Any<string>(), Arg.Any<int>(), null)
+                .Returns(true);
 
             var request = new CreateUnitMasterRequest
             {
@@ -182,7 +182,7 @@ namespace ErpBE.Tests.Validators
         public async Task CreateValidator_WithZeroCompanyId_ShouldHaveValidationError()
         {
             // Arrange
-            var validator = new CreateUnitMasterValidator(_mockRepository.Object);
+            var validator = new CreateUnitMasterValidator(_mockRepository);
             var request = new CreateUnitMasterRequest
             {
                 UnitName = "KG",
@@ -203,7 +203,7 @@ namespace ErpBE.Tests.Validators
         public async Task CreateValidator_WithNegativeCompanyId_ShouldHaveValidationError()
         {
             // Arrange
-            var validator = new CreateUnitMasterValidator(_mockRepository.Object);
+            var validator = new CreateUnitMasterValidator(_mockRepository);
             var request = new CreateUnitMasterRequest
             {
                 UnitName = "KG",
@@ -228,11 +228,11 @@ namespace ErpBE.Tests.Validators
         public async Task UpdateValidator_WithValidData_ShouldNotHaveValidationErrors()
         {
             // Arrange
-            var validator = new UpdateUnitMasterValidator(_mockRepository.Object);
-            _mockRepository.Setup(x => x.GetUnitMasterByIdAsync(1))
-                .ReturnsAsync(new UnitMasterDto { Id = 1, UnitName = "KG", CompanyId = 1 });
-            _mockRepository.Setup(x => x.IsUnitNameUniqueAsync("GRAM", 1, 1))
-                .ReturnsAsync(true);
+            var validator = new UpdateUnitMasterValidator(_mockRepository);
+            _mockRepository.GetUnitMasterByIdAsync(1)
+                .Returns(new UnitMasterDto { Id = 1, UnitName = "KG", CompanyId = 1 });
+            _mockRepository.IsUnitNameUniqueAsync("GRAM", 1, 1)
+                .Returns(true);
 
             var request = new UpdateUnitMasterRequest
             {
@@ -253,7 +253,7 @@ namespace ErpBE.Tests.Validators
         public async Task UpdateValidator_WithZeroId_ShouldHaveValidationError()
         {
             // Arrange
-            var validator = new UpdateUnitMasterValidator(_mockRepository.Object);
+            var validator = new UpdateUnitMasterValidator(_mockRepository);
             var request = new UpdateUnitMasterRequest
             {
                 Id = 0,
@@ -274,9 +274,9 @@ namespace ErpBE.Tests.Validators
         public async Task UpdateValidator_WithNonExistentId_ShouldHaveValidationError()
         {
             // Arrange
-            var validator = new UpdateUnitMasterValidator(_mockRepository.Object);
-            _mockRepository.Setup(x => x.GetUnitMasterByIdAsync(999))
-                .ReturnsAsync((UnitMasterDto?)null); // Unit not found
+            var validator = new UpdateUnitMasterValidator(_mockRepository);
+            _mockRepository.GetUnitMasterByIdAsync(999)
+                .Returns((UnitMasterDto?)null); // Unit not found
 
             var request = new UpdateUnitMasterRequest
             {
@@ -298,11 +298,11 @@ namespace ErpBE.Tests.Validators
         public async Task UpdateValidator_WithDuplicateUnitName_ShouldHaveValidationError()
         {
             // Arrange
-            var validator = new UpdateUnitMasterValidator(_mockRepository.Object);
-            _mockRepository.Setup(x => x.GetUnitMasterByIdAsync(1))
-                .ReturnsAsync(new UnitMasterDto { Id = 1, UnitName = "KG", CompanyId = 1 });
-            _mockRepository.Setup(x => x.IsUnitNameUniqueAsync("GRAM", 1, 1))
-                .ReturnsAsync(false); // Name already exists for another unit
+            var validator = new UpdateUnitMasterValidator(_mockRepository);
+            _mockRepository.GetUnitMasterByIdAsync(1)
+                .Returns(new UnitMasterDto { Id = 1, UnitName = "KG", CompanyId = 1 });
+            _mockRepository.IsUnitNameUniqueAsync("GRAM", 1, 1)
+                .Returns(false); // Name already exists for another unit
 
             var request = new UpdateUnitMasterRequest
             {
@@ -324,7 +324,7 @@ namespace ErpBE.Tests.Validators
         public async Task UpdateValidator_WithEmptyUnitName_ShouldHaveValidationError()
         {
             // Arrange
-            var validator = new UpdateUnitMasterValidator(_mockRepository.Object);
+            var validator = new UpdateUnitMasterValidator(_mockRepository);
             var request = new UpdateUnitMasterRequest
             {
                 Id = 1,

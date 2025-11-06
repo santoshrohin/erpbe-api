@@ -1,85 +1,87 @@
 using System.Collections.Generic;
-using System.Net;
-using System.Net.Http.Json;
+using System.Linq;
 using System.Threading.Tasks;
+using ErpBE.Application.Common;
 using ErpBE.Application.Common.Models;
+using ErpBE.Tests.Integration;
 using FluentAssertions;
 using Xunit;
-using Microsoft.AspNetCore.Mvc.Testing;
 
-namespace ErpBE.Tests.Common
+namespace ErpBE.Tests.Common;
+
+/// <summary>
+/// Integration tests for Dropdown functionality
+/// Tests dropdown data retrieval (matches reference implementation - tests handlers directly)
+/// </summary>
+public class DropdownControllerTests : IntegrationTestBase
 {
-    public class DropdownControllerTests : TestBase
+    [Fact]
+    public async Task BatchDropdown_MultiMaster_WorksAndReturnsPaging()
     {
-        public DropdownControllerTests(WebApplicationFactory<Program> factory) : base(factory) { }
-
-        [Fact]
-        public async Task BatchDropdown_MultiMaster_WorksAndReturnsPaging()
+        // Arrange
+        var request = new BatchDropdownRequest
         {
-            // Arrange
-            var request = new BatchDropdownRequest
+            Requests = new List<NamedDropdownBatchRequest>
             {
-                Requests = new List<NamedDropdownBatchRequest>
+                new NamedDropdownBatchRequest
                 {
-                    new NamedDropdownBatchRequest
+                    Key = "customer",
+                    Request = new DropdownRequest
                     {
-                        Key = "customer",
-                        Request = new DropdownRequest
-                        {
-                            Table = "PARTY_MASTER",
-                            IdColumn = "P_CODE",
-                            DisplayColumn = "P_NAME",
-                            Where = "ES_DELETE = 0 AND P_ACTIVE_IND = 1",
-                            OrderBy = "P_NAME ASC",
-                            SearchText = string.Empty
-                        }
-                    },
-                    new NamedDropdownBatchRequest
+                        Table = "PARTY_MASTER",
+                        IdColumn = "P_CODE",
+                        DisplayColumn = "P_NAME",
+                        Where = "ES_DELETE = 0 AND P_ACTIVE_IND = 1",
+                        OrderBy = "P_NAME ASC",
+                        SearchText = string.Empty
+                    }
+                },
+                new NamedDropdownBatchRequest
+                {
+                    Key = "poType",
+                    Request = new DropdownRequest
                     {
-                        Key = "poType",
-                        Request = new DropdownRequest
-                        {
-                            Table = "PO_TYPE_MASTER",
-                            IdColumn = "PO_T_CODE",
-                            DisplayColumn = "PO_T_DESC",
-                            Where = "ES_DELETE = 0",
-                            OrderBy = "PO_T_DESC ASC",
-                            SearchText = string.Empty
-                        }
-                    },
-                    new NamedDropdownBatchRequest
+                        Table = "PO_TYPE_MASTER",
+                        IdColumn = "PO_T_CODE",
+                        DisplayColumn = "PO_T_DESC",
+                        Where = "ES_DELETE = 0",
+                        OrderBy = "PO_T_DESC ASC",
+                        SearchText = string.Empty
+                    }
+                },
+                new NamedDropdownBatchRequest
+                {
+                    Key = "item",
+                    Request = new DropdownRequest
                     {
-                        Key = "item",
-                        Request = new DropdownRequest
-                        {
-                            Table = "ITEM_MASTER",
-                            IdColumn = "I_CODE",
-                            DisplayColumn = "I_NAME",
-                            Where = "ES_DELETE = 0 AND I_ACTIVE_IND = 1",
-                            OrderBy = "I_NAME ASC",
-                            Skip = 0,
-                            Take = 10,
-                            SearchText = string.Empty
-                        }
+                        Table = "ITEM_MASTER",
+                        IdColumn = "I_CODE",
+                        DisplayColumn = "I_NAME",
+                        Where = "ES_DELETE = 0 AND I_ACTIVE_IND = 1",
+                        OrderBy = "I_NAME ASC",
+                        Skip = 0,
+                        Take = 10,
+                        SearchText = string.Empty
                     }
                 }
-            };
+            }
+        };
 
-            // Act
-            var response = await Client.PostAsJsonAsync("/api/Dropdown/batch", request);
-            var responseBody = await response.Content.ReadAsStringAsync();
-            response.StatusCode.Should().Be(HttpStatusCode.OK, "Response: {0}", responseBody);
-            var data = await response.Content.ReadFromJsonAsync<BatchDropdownResponse>();
+        var query = new GetBatchDropdownsQuery(request);
 
-            // Assert
-            data.Should().NotBeNull();
-            data!.Data.Should().ContainKey("customer");
-            data.Data.Should().ContainKey("poType");
-            data.Data.Should().ContainKey("item");
-            data.Data["item"].Count.Should().BeLessOrEqualTo(10);
-            var firstItem = data.Data["item"].FirstOrDefault();
-            if (firstItem != null && firstItem.TotalCount.HasValue)
-                firstItem.TotalCount.Should().BeGreaterThan(0);
+        // Act
+        var data = await Mediator.Send(query);
+
+        // Assert
+        data.Should().NotBeNull();
+        data!.Data.Should().ContainKey("customer");
+        data.Data.Should().ContainKey("poType");
+        data.Data.Should().ContainKey("item");
+        data.Data["item"].Count.Should().BeLessOrEqualTo(10);
+        var firstItem = data.Data["item"].FirstOrDefault();
+        if (firstItem != null && firstItem.TotalCount.HasValue)
+        {
+            firstItem.TotalCount.Should().BeGreaterThan(0);
         }
     }
 }

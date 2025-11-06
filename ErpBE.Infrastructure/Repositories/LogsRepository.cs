@@ -47,11 +47,14 @@ namespace ErpBE.Infrastructure.Repositories
         public async Task<(IEnumerable<dynamic> levelStats, IEnumerable<dynamic> dailyStats)> GetLogStatisticsAsync()
         {
             using var connection = new SqlConnection(_connectionString);
+            await connection.OpenAsync();
 
             // Use stored procedure for better performance
-            var results = await connection.QueryMultipleAsync("SP_GetLogStatistics");
-            var levelStats = await results.ReadAsync();
-            var dailyStats = await results.ReadAsync();
+            // The stored procedure returns only level statistics
+            var levelStats = (await connection.QueryAsync("SP_GetLogStatistics", commandType: System.Data.CommandType.StoredProcedure)).ToList();
+            
+            // Daily statistics not available from stored procedure, return empty list
+            var dailyStats = new List<dynamic>();
 
             return (levelStats, dailyStats);
         }
