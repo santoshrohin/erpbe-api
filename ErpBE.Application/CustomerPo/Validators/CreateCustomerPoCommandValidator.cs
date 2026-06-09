@@ -29,15 +29,16 @@ public class CreateCustomerPoCommandValidator : AbstractValidator<CreateCustomer
             .NotEmpty()
             .WithMessage("PO Date is required.");
 
+        // Legacy rule: PO Date must not be earlier than Customer PO Date.
+        // CustomerPO.aspx.cs line 230: if (PoDate < CustPoDate) → "PO Date Should Not Greater than Entry Date"
+        RuleFor(x => x)
+            .Must(x => !x.CustomerPoDate.HasValue || x.PoDate >= x.CustomerPoDate.Value)
+            .WithMessage("PO Date must not be earlier than Customer PO Date.")
+            .When(x => x.CustomerPoDate.HasValue && x.PoDate != default);
+
         RuleFor(x => x.CompanyId)
             .NotEqual(0)
             .WithMessage("Company ID is required.");
-
-        RuleFor(x => x.ProjectCode)
-            .NotNull()
-            .WithMessage("Project Code is required.")
-            .NotEqual(0)
-            .WithMessage("Project Code must be valid.");
 
         // Payment Terms
         RuleFor(x => x.PaymentTerms)
@@ -65,9 +66,14 @@ public class CreateCustomerPoCommandValidator : AbstractValidator<CreateCustomer
             .When(x => x.DiscountPercentage.HasValue);
 
         RuleFor(x => x.GrandTotal)
-            .GreaterThan(0)
-            .WithMessage("Grand Total must be greater than 0.")
+            .GreaterThanOrEqualTo(0)
+            .WithMessage("Grand Total cannot be negative.")
             .When(x => x.GrandTotal.HasValue);
+
+        RuleFor(x => x.ProjectCode)
+            .GreaterThan(0)
+            .WithMessage("ProjectCode must be a valid project ID (null means no project; 0 is not a valid project ID).")
+            .When(x => x.ProjectCode.HasValue);
 
         // Line Items
         RuleFor(x => x.Details)

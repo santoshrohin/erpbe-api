@@ -1,0 +1,30 @@
+{
+  "name": "erp-e2e-tests",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:debug": "playwright test --debug",
+    "test:po": "playwright test tests/purchase-order",
+    "test:invoice": "playwright test tests/tax-invoice",
+    "test:challan": "playwright test tests/delivery-challan",
+    "test:labour": "playwright test tests/labour-charge-invoice",
+    "test:contract": "playwright test tests/purchase-order/po-network-contract.spec.ts",
+    "test:parity": "playwright test parity",
+    "test:ci": "playwright test --reporter=github",
+    "report": "playwright show-report",
+    "install-browsers": "playwright install chromium",
+    "parity:compare": "ts-node parity/har-replay.runner.ts",
+    "db:reset": "sqlcmd -S $DB_SERVER -d $DB_DATABASE -U $DB_USER -P $DB_PASSWORD -i data/03-truncate-transactional.sql"
+  },
+  "dependencies": {
+    "mssql": "^11.0.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.0",
+    "@types/node": "^22.0.0",
+    "glob": "^13.0.6",
+    "pdf-parse": "^2.4.5"
+  }
+}

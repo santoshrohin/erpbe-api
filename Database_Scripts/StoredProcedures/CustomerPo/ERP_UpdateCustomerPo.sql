@@ -1,3 +1,7 @@
+IF EXISTS (SELECT * FROM sys.objects WHERE type = 'P' AND name = 'ERP_UpdateCustomerPo')
+    DROP PROCEDURE [dbo].[ERP_UpdateCustomerPo]
+GO
+
 CREATE PROCEDURE [dbo].[ERP_UpdateCustomerPo]
     @PoCode INT,
     @CustomerCode INT,
@@ -85,9 +89,7 @@ BEGIN
             CPOM_INQ_CODE = @InquiryCode,
             CPOM_IS_VERBAL = @IsVerbalOrder,
             CPOM_PROJECT_CODE = @ProjectCode,
-            CPOM_PROJECT_NAME = @ProjectName,
-            CPOM_AM_COUNT = CPOM_AM_COUNT + 1,
-            CPOM_AM_DATE = GETDATE()
+            CPOM_PROJECT_NAME = @ProjectName
         WHERE 
             CPOM_CODE = @PoCode 
             AND CPOM_CM_COMP_ID = @CompanyId

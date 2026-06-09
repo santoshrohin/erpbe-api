@@ -5,7 +5,7 @@ using ErpBE.Infrastructure.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System.Data;
-using System.Data.SqlClient;
+using Microsoft.Data.SqlClient;
 using System.Text;
 
 namespace ErpBE.Infrastructure.Repositories;
@@ -463,6 +463,133 @@ public class CustomerPoRepository : ICustomerPoRepository
         };
     }
     
+    public async Task<bool> PoNumberExistsAsync(string poNumber, int companyId, int? excludePoCode = null)
+    {
+        using var connection = new SqlConnection(_connectionString);
+        await connection.OpenAsync();
+
+        return await connection.ExecuteScalarAsync<bool>(
+            "ERP_CheckPoNumberExists",
+            new { PoNumber = poNumber, CompanyId = companyId, ExcludePoCode = excludePoCode },
+            commandType: CommandType.StoredProcedure
+        );
+    }
+
+    public async Task<bool> IsUsedInWorkOrderAsync(int poCode)
+    {
+        using var connection = new SqlConnection(_connectionString);
+        await connection.OpenAsync();
+
+        return await connection.ExecuteScalarAsync<bool>(
+            "ERP_CheckPoUsedInWorkOrder",
+            new { PoCode = poCode },
+            commandType: CommandType.StoredProcedure
+        );
+    }
+
+    public async Task<int> AmendAsync(CustomerPoMasterDto po, IEnumerable<CustomerPoDetailDto> details)
+    {
+        using var connection = new SqlConnection(_connectionString);
+        await connection.OpenAsync();
+        using var transaction = connection.BeginTransaction();
+
+        try
+        {
+            // 1. Call ERP_AmendCustomerPo — archives master+details, updates master, deletes old details
+            var masterParameters = new DynamicParameters();
+            masterParameters.Add("@PoCode", po.PoCode);
+            masterParameters.Add("@CustomerCode", po.CustomerCode);
+            masterParameters.Add("@PoNumber", po.PoNumber);
+            masterParameters.Add("@PoType", po.PoType);
+            masterParameters.Add("@PoDate", po.PoDate);
+            masterParameters.Add("@CreditDays", po.CreditDays);
+            masterParameters.Add("@CompanyId", po.CompanyId);
+            masterParameters.Add("@WorkOrderNumber", po.WorkOrderNumber);
+            masterParameters.Add("@PaymentTerms", po.PaymentTerms);
+            masterParameters.Add("@IsAuthorized", po.IsAuthorized);
+            masterParameters.Add("@CustomerPoDate", po.CustomerPoDate);
+            masterParameters.Add("@QuotationCode", po.QuotationCode);
+            masterParameters.Add("@TaxName", po.TaxName);
+            masterParameters.Add("@TaxPercentage", po.TaxPercentage);
+            masterParameters.Add("@TaxAmount", po.TaxAmount);
+            masterParameters.Add("@ExcisePercentage", po.ExcisePercentage);
+            masterParameters.Add("@ExciseEducationPercentage", po.ExciseEducationPercentage);
+            masterParameters.Add("@ExciseHigherEducationPercentage", po.ExciseHigherEducationPercentage);
+            masterParameters.Add("@BasicAmount", po.BasicAmount);
+            masterParameters.Add("@DiscountPercentage", po.DiscountPercentage);
+            masterParameters.Add("@DiscountAmount", po.DiscountAmount);
+            masterParameters.Add("@DiscountReason", po.DiscountReason);
+            masterParameters.Add("@DeviationAmount", po.DeviationAmount);
+            masterParameters.Add("@DeviationReason", po.DeviationReason);
+            masterParameters.Add("@PackingAmount", po.PackingAmount);
+            masterParameters.Add("@ExciseAmount", po.ExciseAmount);
+            masterParameters.Add("@RoundingAmount", po.RoundingAmount);
+            masterParameters.Add("@GrandTotal", po.GrandTotal);
+            masterParameters.Add("@FinalDestination", po.FinalDestination);
+            masterParameters.Add("@PreCarriageBy", po.PreCarriageBy);
+            masterParameters.Add("@PortOfLoading", po.PortOfLoading);
+            masterParameters.Add("@PortOfDischarge", po.PortOfDischarge);
+            masterParameters.Add("@PlaceOfDelivery", po.PlaceOfDelivery);
+            masterParameters.Add("@BuyerName", po.BuyerName);
+            masterParameters.Add("@BuyerAddress", po.BuyerAddress);
+            masterParameters.Add("@CurrencyCode", po.CurrencyCode);
+            masterParameters.Add("@InquiryCode", po.InquiryCode);
+            masterParameters.Add("@IsVerbalOrder", po.IsVerbalOrder);
+            masterParameters.Add("@ProjectCode", po.ProjectCode);
+            masterParameters.Add("@ProjectName", po.ProjectName);
+
+            var amendCount = await connection.ExecuteScalarAsync<int>(
+                "ERP_AmendCustomerPo",
+                masterParameters,
+                transaction,
+                commandType: CommandType.StoredProcedure
+            );
+
+            // 2. Re-insert new detail lines (SP deleted the old ones)
+            foreach (var detail in details)
+            {
+                var detailParameters = new DynamicParameters();
+                detailParameters.Add("@PoCode", po.PoCode);
+                detailParameters.Add("@ItemCode", detail.ItemCode);
+                detailParameters.Add("@UomCode", detail.UomCode);
+                detailParameters.Add("@OrderedQuantity", detail.OrderedQuantity);
+                detailParameters.Add("@Rate", detail.Rate);
+                detailParameters.Add("@Amount", detail.Amount);
+                detailParameters.Add("@Description", detail.Description);
+                detailParameters.Add("@CustomerItemCode", detail.CustomerItemCode);
+                detailParameters.Add("@CustomerItemName", detail.CustomerItemName);
+                detailParameters.Add("@Status", detail.Status);
+                detailParameters.Add("@DispatchedQuantity", detail.DispatchedQuantity);
+                detailParameters.Add("@IsOrder", detail.IsOrder);
+                detailParameters.Add("@StoreCode", detail.StoreCode);
+                detailParameters.Add("@CurrencyCode", detail.CurrencyCode);
+                detailParameters.Add("@WorkOrderQuantity", detail.WorkOrderQuantity);
+                detailParameters.Add("@ModificationNumber", detail.ModificationNumber);
+                detailParameters.Add("@ModificationDate", detail.ModificationDate);
+                detailParameters.Add("@AmortizationRate", detail.AmortizationRate);
+                detailParameters.Add("@DieAmortizationRate", detail.DieAmortizationRate);
+                detailParameters.Add("@DiscountPercentage", detail.DiscountPercentage);
+                detailParameters.Add("@DiscountAmount", detail.DiscountAmount);
+                detailParameters.Add("@TaxCategoryCode", detail.TaxCategoryCode);
+
+                await connection.ExecuteAsync(
+                    "ERP_CreateCustomerPoDetail",
+                    detailParameters,
+                    transaction,
+                    commandType: CommandType.StoredProcedure
+                );
+            }
+
+            transaction.Commit();
+            return amendCount;
+        }
+        catch
+        {
+            transaction.Rollback();
+            throw;
+        }
+    }
+
     // Helper class to read PO header with additional fields from stored procedure
     private class PoHeaderExtendedData : PoHeaderPrintInfo
     {

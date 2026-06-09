@@ -1,5 +1,6 @@
 using ErpBE.Application.CustomerPo.Commands;
 using ErpBE.Application.DTOs;
+using ErpBE.Tests.Integration;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc.Testing;
 using System.Net;
@@ -8,6 +9,7 @@ using Xunit;
 
 namespace ErpBE.Tests.Sales;
 
+[Collection(nameof(IntegrationFixture))]
 public class CustomerPoControllerTests : IClassFixture<WebApplicationFactory<Program>>
 {
     private readonly HttpClient _client;
@@ -38,7 +40,7 @@ public class CustomerPoControllerTests : IClassFixture<WebApplicationFactory<Pro
         loginResponse.EnsureSuccessStatusCode();
 
         var loginResult = await loginResponse.Content.ReadFromJsonAsync<dynamic>();
-        _authToken = loginResult?.GetProperty("token").GetString();
+        _authToken = loginResult?.GetProperty("accessToken").GetString();
 
         _client.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _authToken);

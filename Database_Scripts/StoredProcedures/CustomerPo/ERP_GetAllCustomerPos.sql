@@ -39,10 +39,15 @@ BEGIN
         ELSE
             SET @WHERE = @WHERE + ' AND m.ES_DELETE = 1 ';
 
+        -- Legacy ViewCustomerPO.aspx.cs searches: CPOM_PONO, CPOM_DATE, CPOD_CUST_I_CODE, P_NAME, CPOM_DOC_NO, CPOM_WORK_ODR_NO
         IF @SearchTerm IS NOT NULL AND @SearchTerm != ''
-            SET @WHERE = @WHERE + ' AND (m.CPOM_PONO LIKE ''%'' + @SearchTerm + ''%'' 
-                OR p.P_NAME LIKE ''%'' + @SearchTerm + ''%'' 
-                OR m.CPOM_WORK_ODR_NO LIKE ''%'' + @SearchTerm + ''%'') ';
+            SET @WHERE = @WHERE + ' AND (m.CPOM_PONO LIKE ''%'' + @SearchTerm + ''%''
+                OR p.P_NAME LIKE ''%'' + @SearchTerm + ''%''
+                OR m.CPOM_WORK_ODR_NO LIKE ''%'' + @SearchTerm + ''%''
+                OR CONVERT(VARCHAR, m.CPOM_DATE, 106) LIKE ''%'' + @SearchTerm + ''%''
+                OR CAST(m.CPOM_DOC_NO AS NVARCHAR(20)) LIKE ''%'' + @SearchTerm + ''%''
+                OR EXISTS (SELECT 1 FROM CUSTPO_DETAIL sd WHERE sd.CPOD_CPOM_CODE = m.CPOM_CODE AND sd.CPOD_CUST_I_CODE LIKE ''%'' + @SearchTerm + ''%'')
+                ) ';
 
         IF @PoNumber IS NOT NULL
             SET @WHERE = @WHERE + ' AND m.CPOM_PONO LIKE ''%'' + @PoNumber + ''%'' ';
@@ -129,7 +134,8 @@ BEGIN
             m.CPOM_AM_COUNT AS AmendmentCount,
             m.CPOM_IS_VERBAL AS IsVerbalOrder,
             m.CPOM_PROJECT_CODE AS ProjectCode,
-            m.CPOM_PROJECT_NAME AS ProjectName
+            m.CPOM_PROJECT_NAME AS ProjectName,
+            (SELECT TOP 1 d.CPOD_CUST_I_CODE FROM CUSTPO_DETAIL d WHERE d.CPOD_CPOM_CODE = m.CPOM_CODE ORDER BY d.CPOD_I_CODE) AS CustomerPartNo
         FROM CUSTPO_MASTER m
         INNER JOIN PARTY_MASTER p ON m.CPOM_P_CODE = p.P_CODE ' + @WHERE + @ORDERBY + '
         OFFSET @Offset ROWS

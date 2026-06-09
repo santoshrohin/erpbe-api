@@ -13,12 +13,12 @@ BEGIN
     SET NOCOUNT ON;
     
     -- Result Set 1: Company Information
-    SELECT 
+    SELECT
         CM.CM_NAME AS CompanyName,
         ISNULL(CM.CM_ADDRESS1, '') AS FullAddress,
         CM.CM_GST_NO AS GstinNo
     FROM COMPANY_MASTER CM
-    WHERE CM.CM_CODE = @CompanyCode;
+    WHERE CM.CM_ID = @CompanyId;
     
     -- Result Set 2: PO Header
     SELECT 

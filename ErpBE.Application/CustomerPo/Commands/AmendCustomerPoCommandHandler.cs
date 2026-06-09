@@ -5,13 +5,13 @@ using MediatR;
 
 namespace ErpBE.Application.CustomerPo.Commands;
 
-public class CreateCustomerPoCommandHandler : IRequestHandler<CreateCustomerPoCommand, CustomerPoMasterDto>
+public class AmendCustomerPoCommandHandler : IRequestHandler<AmendCustomerPoCommand, CustomerPoMasterDto>
 {
     private readonly ICustomerPoRepository _repository;
     private readonly IActivityLogService   _activityLog;
     private readonly ICompanyContext       _ctx;
 
-    public CreateCustomerPoCommandHandler(
+    public AmendCustomerPoCommandHandler(
         ICustomerPoRepository repository,
         IActivityLogService   activityLog,
         ICompanyContext       ctx)
@@ -21,10 +21,14 @@ public class CreateCustomerPoCommandHandler : IRequestHandler<CreateCustomerPoCo
         _ctx         = ctx;
     }
 
-    public async Task<CustomerPoMasterDto> Handle(CreateCustomerPoCommand request, CancellationToken cancellationToken)
+    public async Task<CustomerPoMasterDto> Handle(AmendCustomerPoCommand request, CancellationToken cancellationToken)
     {
+        if (request.Details.Count == 0)
+            throw new InvalidOperationException("At least one detail line is required.");
+
         var poMaster = new CustomerPoMasterDto
         {
+            PoCode = request.PoCode,
             CustomerCode = request.CustomerCode,
             PoNumber = request.PoNumber,
             PoType = request.PoType,
@@ -66,46 +70,39 @@ public class CreateCustomerPoCommandHandler : IRequestHandler<CreateCustomerPoCo
             ProjectName = request.ProjectName
         };
 
-        var poDetails = (request.Details ?? new List<CreateCustomerPoDetailCommand>())
-            .Select(d => new CustomerPoDetailDto
-            {
-                ItemCode = d.ItemCode,
-                UomCode = d.UomCode,
-                OrderedQuantity = d.OrderedQuantity,
-                Rate = d.Rate,
-                Amount = d.Amount,
-                Description = d.Description,
-                CustomerItemCode = d.CustomerItemCode,
-                CustomerItemName = d.CustomerItemName,
-                Status = d.Status,
-                DispatchedQuantity = d.DispatchedQuantity,
-                IsOrder = d.IsOrder,
-                StoreCode = d.StoreCode,
-                CurrencyCode = d.CurrencyCode,
-                WorkOrderQuantity = d.WorkOrderQuantity,
-                ModificationNumber = d.ModificationNumber,
-                ModificationDate = d.ModificationDate,
-                AmortizationRate = d.AmortizationRate,
-                DieAmortizationRate = d.DieAmortizationRate,
-                DiscountPercentage = d.DiscountPercentage,
-                DiscountAmount = d.DiscountAmount,
-                TaxCategoryCode = d.TaxCategoryCode
-            }).ToList();
-
-        // Legacy CustomerPO.aspx.cs: duplicate PO number check is skipped only when IsVerbal=true
-        if (!request.IsVerbalOrder)
+        var poDetails = request.Details.Select(d => new CustomerPoDetailDto
         {
-            var exists = await _repository.PoNumberExistsAsync(request.PoNumber, request.CompanyId);
-            if (exists)
-                throw new InvalidOperationException($"PO Number '{request.PoNumber}' already exists.");
-        }
+            ItemCode = d.ItemCode,
+            UomCode = d.UomCode,
+            OrderedQuantity = d.OrderedQuantity,
+            Rate = d.Rate,
+            Amount = d.Amount,
+            Description = d.Description,
+            CustomerItemCode = d.CustomerItemCode,
+            CustomerItemName = d.CustomerItemName,
+            Status = d.Status,
+            DispatchedQuantity = d.DispatchedQuantity,
+            IsOrder = d.IsOrder,
+            StoreCode = d.StoreCode,
+            CurrencyCode = d.CurrencyCode,
+            WorkOrderQuantity = d.WorkOrderQuantity,
+            ModificationNumber = d.ModificationNumber,
+            ModificationDate = d.ModificationDate,
+            AmortizationRate = d.AmortizationRate,
+            DieAmortizationRate = d.DieAmortizationRate,
+            DiscountPercentage = d.DiscountPercentage,
+            DiscountAmount = d.DiscountAmount
+        }).ToList();
 
-        var result = await _repository.CreateAsync(poMaster, poDetails);
+        await _repository.AmendAsync(poMaster, poDetails);
+
+        var result = await _repository.GetByIdAsync(request.PoCode, request.CompanyId)
+            ?? throw new InvalidOperationException($"Customer PO {request.PoCode} not found after amend.");
 
         await _activityLog.WriteLogAsync(
             companyId: request.CompanyId,
             source:    "CustomerPo",
-            @event:    "INSERT",
+            @event:    "AMEND",
             docName:   "Customer PO",
             docNo:     result.PoNumber ?? string.Empty,
             docCode:   result.PoCode,
@@ -116,4 +113,3 @@ public class CreateCustomerPoCommandHandler : IRequestHandler<CreateCustomerPoCo
         return result;
     }
 }
-
