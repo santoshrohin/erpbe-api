@@ -25,6 +25,10 @@ public abstract class IntegrationTestBase : IAsyncLifetime
     /// </summary>
     public virtual Task InitializeAsync()
     {
+        if (!IntegrationFixture.IsAvailable)
+            throw new InvalidOperationException(
+                $"[INTEGRATION TEST SKIPPED] {IntegrationFixture.UnavailableReason}");
+
         _serviceProvider = BuildServiceProvider();
 
         IServiceScope serviceScope;
@@ -39,6 +43,7 @@ public abstract class IntegrationTestBase : IAsyncLifetime
 
     public async Task DisposeAsync()
     {
+        if (!IntegrationFixture.IsAvailable) return;
         await ResetDatabaseAsync();
         _serviceScopes.ForEach(s => s.Dispose());
         await _serviceProvider.DisposeAsync();
@@ -70,13 +75,13 @@ public abstract class IntegrationTestBase : IAsyncLifetime
         };
 
         var response = await Mediator.Send(loginRequest);
-        
-        if (response == null || string.IsNullOrEmpty(response.Token))
+
+        if (response == null || string.IsNullOrEmpty(response.AccessToken))
         {
             throw new System.Exception($"Login failed for TestUser. " +
                 "Make sure to run 'Setup_Test_User.sql' script first!");
         }
 
-        return response.Token;
+        return response.AccessToken;
     }
 }

@@ -91,6 +91,14 @@ namespace ErpBE.API.Controllers.Admin
                 }
                 return NotFound(new { message = "User not found" });
             }
+            catch (InvalidOperationException ex) when (ex.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
+            {
+                return NotFound(new { message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error deleting user");

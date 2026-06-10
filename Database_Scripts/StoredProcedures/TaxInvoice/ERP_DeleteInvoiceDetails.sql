@@ -3,8 +3,8 @@
 -- Create date: 2025-10-24
 -- Description: Deletes invoice details for a given invoice code
 -- =============================================
-CREATE PROCEDURE [dbo].[ERP_DeleteInvoiceDetails]
-    @InvoiceCode INT
+CREATE or alter PROCEDURE [dbo].[ERP_DeleteInvoiceDetails]
+    @InvoiceCode BIGINT
 AS
 BEGIN
     SET NOCOUNT ON;

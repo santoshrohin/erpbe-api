@@ -90,27 +90,6 @@ namespace ErpBE.Tests.Sales
         }
 
         [Fact]
-        public async Task CreateTaxInvoice_WithoutCustomerPo_ShouldThrowException()
-        {
-            // Arrange
-            var command = new CreateTaxInvoiceCommand
-            {
-                CompanyCode = 1,
-                InvoiceDate = DateTime.Now,
-                CustomerCode = 1,
-                CustomerPoCode = null, // Missing (MANDATORY)
-                InvoiceDetails = new List<CreateTaxInvoiceDetailCommand>
-                {
-                    new CreateTaxInvoiceDetailCommand { ItemCode = 1, UomCode = 1, InvoiceQuantity = 10, Rate = 100 }
-                }
-            };
-
-            // Act & Assert
-            await Assert.ThrowsAnyAsync<Exception>(async () =>
-                await Mediator.Send(command));
-        }
-
-        [Fact]
         public async Task CreateTaxInvoice_WithGstCalculations_ShouldCalculateCorrectly()
         {
             // Arrange

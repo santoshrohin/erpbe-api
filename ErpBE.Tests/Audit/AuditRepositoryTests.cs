@@ -260,7 +260,7 @@ namespace ErpBE.Tests.Audit
             // Arrange
             var config = new AuditConfiguration
             {
-                Endpoint = "/api/test/config",
+                Endpoint = $"/api/test/config/{Guid.NewGuid():N}",
                 HttpMethod = "POST",
                 EntityName = "ConfigTest",
                 EntityIdProperty = "Id",

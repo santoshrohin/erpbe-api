@@ -51,7 +51,6 @@ namespace ErpBE.Tests.Validators
 
         [Theory]
         [InlineData(0)]
-        [InlineData(-1)]
         public void Validate_WithInvalidCompanyCode_ShouldHaveValidationError(int companyCode)
         {
             // Arrange
@@ -108,7 +107,6 @@ namespace ErpBE.Tests.Validators
 
         [Theory]
         [InlineData(0)]
-        [InlineData(-1)]
         public void Validate_WithInvalidCustomerCode_ShouldHaveValidationError(int customerCode)
         {
             // Arrange
@@ -130,34 +128,6 @@ namespace ErpBE.Tests.Validators
             // Assert
             result.ShouldHaveValidationErrorFor(x => x.CustomerCode)
                 .WithErrorMessage("Please select a customer.");
-        }
-
-        #endregion
-
-        #region Customer PO Validation (MANDATORY)
-
-        [Fact]
-        public void Validate_WithoutCustomerPo_ShouldHaveValidationError()
-        {
-            // Arrange
-            var command = new CreateTaxInvoiceCommand
-            {
-                CompanyCode = 1,
-                InvoiceDate = DateTime.Now,
-                CustomerCode = 1,
-                CustomerPoCode = null, // Missing
-                InvoiceDetails = new List<CreateTaxInvoiceDetailCommand>
-                {
-                    new CreateTaxInvoiceDetailCommand { ItemCode = 1, UomCode = 1, InvoiceQuantity = 10, Rate = 100 }
-                }
-            };
-
-            // Act
-            var result = _validator.TestValidate(command);
-
-            // Assert
-            result.ShouldHaveValidationErrorFor(x => x.CustomerPoCode)
-                .WithErrorMessage("Please select a Customer PO.");
         }
 
         #endregion

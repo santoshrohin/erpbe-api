@@ -58,6 +58,9 @@ public class CustomerPoMasterDto
     public bool InvoiceGenerated { get; set; }
     public int AmendmentCount { get; set; }
 
+    // Listing grid computed columns
+    public string? CustomerPartNo { get; set; } // CPOD_CUST_I_CODE from first detail — shown in ViewCustomerPO grid
+
     // Export Information
     public string? FinalDestination { get; set; }
     public string? PreCarriageBy { get; set; }

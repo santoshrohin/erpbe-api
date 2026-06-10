@@ -2,7 +2,7 @@ using ErpBE.Application.DTOs;
 using ErpBE.Application.Interfaces;
 using ErpBE.Application.Common;
 using Dapper;
-using System.Data.SqlClient;
+using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 
 namespace ErpBE.Infrastructure.Repositories

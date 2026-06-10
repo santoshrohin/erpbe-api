@@ -268,24 +268,30 @@ public static class DatabaseSchemaDeployer
     {
         using var connection = new SqlConnection(connectionString);
         await connection.OpenAsync();
-        
+
         Console.WriteLine("---- Seeding test data...");
-        
+
         // Seed COMPANY_MASTER first (required for other tables)
         await SeedCompanyMasterAsync(connection);
-        
+
         // Seed ROLES (required before UserRoles)
         await SeedRolesAsync(connection);
-        
+
         // Seed USER_MASTER (password will be set by EnsureTestUserPasswordAsync)
         await SeedUserMasterAsync(connection);
-        
+
         // Assign Admin role to TestUser
         await AssignAdminRoleToTestUserAsync(connection);
-        
+
+        // Seed USER_RIGHT permissions for TestUser
+        await SeedUserRightAsync(connection);
+
         Console.WriteLine("---- Test data seeded successfully");
+
+        // Seed master data required by TaxInvoice integration tests
+        await SeedMasterTestDataAsync(connectionString);
     }
-    
+
     /// <summary>
     /// Seeds COMPANY_MASTER table
     /// </summary>
@@ -293,21 +299,33 @@ public static class DatabaseSchemaDeployer
     {
         var command = connection.CreateCommand();
         command.CommandText = @"
-            -- Ensure COMPANY_MASTER has test data (CM_ID=1, CM_CODE=-2147483641)
-            -- Note: CM_ID is not IDENTITY, CM_CODE is NOT NULL
-            IF NOT EXISTS (SELECT * FROM [dbo].[COMPANY_MASTER] WHERE CM_ID = 1 OR CM_CODE = -2147483641)
+            IF NOT EXISTS (SELECT 1 FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[COMPANY_MASTER]') AND type = N'U') RETURN;
+
+            IF NOT EXISTS (SELECT 1 FROM [dbo].[COMPANY_MASTER] WHERE CM_ID = 1)
             BEGIN
-                INSERT INTO [dbo].[COMPANY_MASTER] ([CM_CODE], [CM_ID], [CM_NAME], [CM_EMAILID], [CM_OPENING_DATE], [CM_CLOSING_DATE], [CM_ACTIVE_IND])
-                VALUES (-2147483641, 1, 'Test Company 1', 'test@company.com', '2024-01-01', '2024-12-31', 1);
+                -- Use IDENTITY_INSERT if CM_ID is an identity column; otherwise insert directly
+                IF EXISTS (SELECT 1 FROM sys.columns
+                           WHERE object_id = OBJECT_ID('COMPANY_MASTER')
+                             AND name = 'CM_ID'
+                             AND is_identity = 1)
+                BEGIN
+                    SET IDENTITY_INSERT [dbo].[COMPANY_MASTER] ON;
+                    INSERT INTO [dbo].[COMPANY_MASTER] ([CM_ID], [CM_CODE], [CM_NAME], [CM_EMAILID], [CM_OPENING_DATE], [CM_CLOSING_DATE], [CM_ACTIVE_IND])
+                    VALUES (1, -2147483641, 'Test Company', 'test@company.com', '2024-01-01', '2024-12-31', 1);
+                    SET IDENTITY_INSERT [dbo].[COMPANY_MASTER] OFF;
+                END
+                ELSE
+                BEGIN
+                    INSERT INTO [dbo].[COMPANY_MASTER] ([CM_ID], [CM_CODE], [CM_NAME], [CM_EMAILID], [CM_OPENING_DATE], [CM_CLOSING_DATE], [CM_ACTIVE_IND])
+                    VALUES (1, -2147483641, 'Test Company', 'test@company.com', '2024-01-01', '2024-12-31', 1);
+                END
             END
             ELSE
             BEGIN
-                -- Update existing company to ensure it's active
+                -- Ensure the existing row is active
                 UPDATE [dbo].[COMPANY_MASTER]
-                SET [CM_ACTIVE_IND] = 1,
-                    [CM_NAME] = 'Test Company 1',
-                    [CM_EMAILID] = 'test@company.com'
-                WHERE CM_ID = 1 OR CM_CODE = -2147483641;
+                SET [CM_ACTIVE_IND] = 1
+                WHERE CM_ID = 1;
             END";
         command.CommandTimeout = 60;
         await command.ExecuteNonQueryAsync();
@@ -418,6 +436,35 @@ public static class DatabaseSchemaDeployer
     }
     
     /// <summary>
+    /// Seeds USER_RIGHT with full permissions for TestUser across all legacy modules.
+    /// Required for ERP_GetUserPermissions to return data in integration tests.
+    /// </summary>
+    private static async Task SeedUserRightAsync(SqlConnection connection)
+    {
+        var command = connection.CreateCommand();
+        command.CommandText = @"
+            DECLARE @UserId INT;
+            SELECT @UserId = UM_CODE FROM [dbo].[USER_MASTER] WHERE UM_USERNAME = 'TestUser';
+            IF @UserId IS NOT NULL AND EXISTS (SELECT 1 FROM sys.objects WHERE name = 'USER_RIGHT' AND type = 'U')
+            BEGIN
+                DELETE FROM [dbo].[USER_RIGHT] WHERE UR_UM_CODE = @UserId;
+                INSERT INTO [dbo].[USER_RIGHT] (UR_UM_CODE, UR_SM_CODE, UR_RIGHTS, UR_IS_DELETE)
+                VALUES
+                    (@UserId, 72,  '1111111', 0),
+                    (@UserId, 73,  '1111111', 0),
+                    (@UserId, 74,  '1111111', 0),
+                    (@UserId, 75,  '1111111', 0),
+                    (@UserId, 76,  '1111111', 0),
+                    (@UserId, 77,  '1111111', 0),
+                    (@UserId, 99,  '1111111', 0),
+                    (@UserId, 106, '1111111', 0);
+            END";
+        command.CommandTimeout = 60;
+        await command.ExecuteNonQueryAsync();
+        Console.WriteLine("---- USER_RIGHT seeded for TestUser");
+    }
+
+    /// <summary>
     /// Ensures TestUser has the correct encrypted password
     /// </summary>
     private static async Task EnsureTestUserPasswordAsync(string connectionString)
@@ -453,6 +500,113 @@ public static class DatabaseSchemaDeployer
     }
     
     /// <summary>
+    /// Seeds master data required by TaxInvoice integration tests.
+    /// Safe to run against shared/production DBs: uses IF NOT EXISTS guards and IDENTITY_INSERT.
+    /// Adds ITEM_MASTER (I_CODE 1 &amp; 2), ITEM_UNIT_MASTER (I_UOM_CODE 1), PARTY_MASTER (P_CODE 1),
+    /// CUSTPO_MASTER (CPOM_CODE 1), and CUSTPO_DETAIL for item 1 in PO 1.
+    /// </summary>
+    public static async Task SeedMasterTestDataAsync(string connectionString)
+    {
+        using var connection = new SqlConnection(connectionString);
+        await connection.OpenAsync();
+        Console.WriteLine("---- Seeding TaxInvoice master test data...");
+        try { await SeedCompanyMasterAsync(connection); }
+        catch (Exception ex) { Console.WriteLine($"---- COMPANY_MASTER seed skipped: {ex.Message}"); }
+        await SeedItemMasterAsync(connection);
+        await SeedItemUnitMasterAsync(connection);
+        await SeedPartyMasterAsync(connection);
+        await SeedCustPoMasterAsync(connection);
+        Console.WriteLine("---- TaxInvoice master test data seeded");
+    }
+
+    private static async Task SeedItemMasterAsync(SqlConnection connection)
+    {
+        var command = connection.CreateCommand();
+        command.CommandTimeout = 60;
+        command.CommandText = @"
+            -- Ensure test items exist so ERP_GetTaxInvoiceItemDetails can return rows
+            IF NOT EXISTS (SELECT 1 FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[ITEM_MASTER]') AND type = N'U') RETURN;
+            IF NOT EXISTS (SELECT 1 FROM [dbo].[ITEM_MASTER] WHERE I_CODE = 1)
+            BEGIN
+                SET IDENTITY_INSERT [dbo].[ITEM_MASTER] ON;
+                INSERT INTO [dbo].[ITEM_MASTER] ([I_CODE], [I_NAME], [I_CODENO], [ES_DELETE])
+                VALUES (1, 'Test Item 1', 'TI-001', 0);
+                SET IDENTITY_INSERT [dbo].[ITEM_MASTER] OFF;
+            END
+            IF NOT EXISTS (SELECT 1 FROM [dbo].[ITEM_MASTER] WHERE I_CODE = 2)
+            BEGIN
+                SET IDENTITY_INSERT [dbo].[ITEM_MASTER] ON;
+                INSERT INTO [dbo].[ITEM_MASTER] ([I_CODE], [I_NAME], [I_CODENO], [ES_DELETE])
+                VALUES (2, 'Test Item 2', 'TI-002', 0);
+                SET IDENTITY_INSERT [dbo].[ITEM_MASTER] OFF;
+            END";
+        try { await command.ExecuteNonQueryAsync(); Console.WriteLine("---- ITEM_MASTER seeded"); }
+        catch (Exception ex) { Console.WriteLine($"---- ITEM_MASTER seed skipped: {ex.Message}"); }
+    }
+
+    private static async Task SeedItemUnitMasterAsync(SqlConnection connection)
+    {
+        var command = connection.CreateCommand();
+        command.CommandTimeout = 60;
+        // I_UOM_CM_COMP_ID is the actual column name (not I_UOM_CM_ID)
+        command.CommandText = @"
+            IF NOT EXISTS (SELECT 1 FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[ITEM_UNIT_MASTER]') AND type = N'U') RETURN;
+            IF NOT EXISTS (SELECT 1 FROM [dbo].[ITEM_UNIT_MASTER] WHERE I_UOM_CODE = 1)
+            BEGIN
+                SET IDENTITY_INSERT [dbo].[ITEM_UNIT_MASTER] ON;
+                INSERT INTO [dbo].[ITEM_UNIT_MASTER] ([I_UOM_CODE], [I_UOM_NAME], [I_UOM_CM_COMP_ID], [ES_DELETE])
+                VALUES (1, 'Nos', 1, 0);
+                SET IDENTITY_INSERT [dbo].[ITEM_UNIT_MASTER] OFF;
+            END";
+        try { await command.ExecuteNonQueryAsync(); Console.WriteLine("---- ITEM_UNIT_MASTER seeded"); }
+        catch (Exception ex) { Console.WriteLine($"---- ITEM_UNIT_MASTER seed skipped: {ex.Message}"); }
+    }
+
+    private static async Task SeedPartyMasterAsync(SqlConnection connection)
+    {
+        var command = connection.CreateCommand();
+        command.CommandTimeout = 60;
+        // P_TYPE, P_NAME, P_CONTACT, P_ADD1 are NOT NULL in the production schema
+        command.CommandText = @"
+            IF NOT EXISTS (SELECT 1 FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[PARTY_MASTER]') AND type = N'U') RETURN;
+            IF NOT EXISTS (SELECT 1 FROM [dbo].[PARTY_MASTER] WHERE P_CODE = 1)
+            BEGIN
+                SET IDENTITY_INSERT [dbo].[PARTY_MASTER] ON;
+                INSERT INTO [dbo].[PARTY_MASTER]
+                    ([P_CODE], [P_CM_COMP_ID], [P_TYPE], [P_NAME], [P_CONTACT], [P_ADD1], [ES_DELETE])
+                VALUES (1, 1, 1, 'Test Customer 1', 'Test Contact', 'Test Address', 0);
+                SET IDENTITY_INSERT [dbo].[PARTY_MASTER] OFF;
+            END";
+        try { await command.ExecuteNonQueryAsync(); Console.WriteLine("---- PARTY_MASTER seeded"); }
+        catch (Exception ex) { Console.WriteLine($"---- PARTY_MASTER seed skipped: {ex.Message}"); }
+    }
+
+    private static async Task SeedCustPoMasterAsync(SqlConnection connection)
+    {
+        var command = connection.CreateCommand();
+        command.CommandTimeout = 60;
+        command.CommandText = @"
+            IF NOT EXISTS (SELECT 1 FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[CUSTPO_MASTER]') AND type = N'U') RETURN;
+            IF NOT EXISTS (SELECT 1 FROM [dbo].[CUSTPO_MASTER] WHERE CPOM_CODE = 1)
+            BEGIN
+                SET IDENTITY_INSERT [dbo].[CUSTPO_MASTER] ON;
+                INSERT INTO [dbo].[CUSTPO_MASTER]
+                    ([CPOM_CODE], [CPOM_P_CODE], [CPOM_CM_COMP_ID], [CPOM_PONO], [CPOM_DATE], [ES_DELETE])
+                VALUES (1, 1, 1, 'TEST-PO-001', GETDATE(), 0);
+                SET IDENTITY_INSERT [dbo].[CUSTPO_MASTER] OFF;
+            END
+            IF NOT EXISTS (SELECT 1 FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[CUSTPO_DETAIL]') AND type = N'U') RETURN;
+            IF NOT EXISTS (SELECT 1 FROM [dbo].[CUSTPO_DETAIL] WHERE CPOD_CPOM_CODE = 1 AND CPOD_I_CODE = 1)
+            BEGIN
+                INSERT INTO [dbo].[CUSTPO_DETAIL]
+                    ([CPOD_CPOM_CODE], [CPOD_I_CODE], [CPOD_UOM_CODE], [CPOD_ORD_QTY], [CPOD_RATE])
+                VALUES (1, 1, 1, 1000, 100);
+            END";
+        try { await command.ExecuteNonQueryAsync(); Console.WriteLine("---- CUSTPO_MASTER/DETAIL seeded"); }
+        catch (Exception ex) { Console.WriteLine($"---- CUSTPO seed skipped: {ex.Message}"); }
+    }
+
+    /// <summary>
     /// Re-seeds test data after database reset (called after Respawner cleanup)
     /// </summary>
     public static async Task SeedTestDataAfterResetAsync(string connectionString)
@@ -473,10 +627,16 @@ public static class DatabaseSchemaDeployer
         
         // Assign Admin role to TestUser
         await AssignAdminRoleToTestUserAsync(connection);
-        
+
+        // Seed USER_RIGHT permissions for TestUser
+        await SeedUserRightAsync(connection);
+
         // Ensure TestUser has the correct encrypted password
         await EnsureTestUserPasswordAsync(connectionString);
-        
+
+        // Re-seed TaxInvoice master test data (wiped by Respawner)
+        await SeedMasterTestDataAsync(connectionString);
+
         Console.WriteLine("---- Test data re-seeded successfully");
     }
 
@@ -702,6 +862,8 @@ public static class DatabaseSchemaDeployer
             "ITEM_MASTER",
             "UNIT_MASTER",
             "USER_MASTER",
+            "USER_RIGHT",
+            "USER_REFRESH_TOKEN",
             "ROLES",
             "UserRoles",
             "CUSTPO_MASTER",
@@ -842,6 +1004,48 @@ public static class DatabaseSchemaDeployer
                 END
             END",
 
+            // AREA_MASTER table
+            @"
+            IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[AREA_MASTER]') AND type = N'U')
+            BEGIN
+                CREATE TABLE [dbo].[AREA_MASTER] (
+                    [A_CODE]       INT IDENTITY(-2147483648,1) NOT NULL CONSTRAINT PK_AREA_MASTER PRIMARY KEY,
+                    [A_U_CODE]     INT NULL,
+                    [A_U_DATE]     DATETIME NULL,
+                    [A_CM_COMP_ID] INT NULL,
+                    [A_NO]         VARCHAR(10) NULL,
+                    [A_DESC]       VARCHAR(50) NULL,
+                    [ES_DELETE]    BIT NULL DEFAULT ((0)),
+                    [MODIFY]       BIT NULL DEFAULT ((0))
+                )
+            END",
+
+            // INVOICE_MASTER table (161 columns — only the core subset needed for tests)
+            @"
+            IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[INVOICE_MASTER]') AND type = N'U')
+            BEGIN
+                CREATE TABLE [dbo].[INVOICE_MASTER] (
+                    [INM_CODE]        INT IDENTITY(-2147483648,1) NOT NULL CONSTRAINT PK_INVOICE_MASTER PRIMARY KEY,
+                    [INM_CM_CODE]     INT NULL,
+                    [INM_NO]          INT NULL,
+                    [INM_DATE]        DATETIME NULL,
+                    [INM_INVOICE_TYPE] TINYINT NULL,
+                    [INM_TYPE]        VARCHAR(50) NULL,
+                    [INM_P_CODE]      INT NULL,
+                    [INM_CPOM_CODE]   INT NULL,
+                    [INM_NET_AMT]     FLOAT NULL DEFAULT ((0)),
+                    [INM_G_AMT]       FLOAT NULL DEFAULT ((0)),
+                    [INM_ROUNDING_AMT] FLOAT NULL,
+                    [INM_TAXABLE_AMT] FLOAT NULL,
+                    [INM_ACCESSIBLE_AMT] FLOAT NULL,
+                    [INM_STATE]       INT NULL,
+                    [INM_HSN_CODE]    VARCHAR(50) NULL,
+                    [INM_REMARK]      VARCHAR(255) NULL,
+                    [ES_DELETE]       BIT NULL DEFAULT ((0)),
+                    [MODIFY]          BIT NULL DEFAULT ((0))
+                )
+            END",
+
             // PARTY_MASTER table (Customer Master) - matches stored procedure schema
             @"
             IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[PARTY_MASTER]') AND type in (N'U'))
@@ -974,7 +1178,28 @@ public static class DatabaseSchemaDeployer
                 )
             END",
 
-            // ITEM_MASTER table - matches stored procedure schema
+            // ITEM_CATEGORY_MASTER must come before ITEM_MASTER (FK dependency)
+            @"
+            IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[ITEM_CATEGORY_MASTER]') AND type in (N'U'))
+            BEGIN
+                CREATE TABLE [dbo].[ITEM_CATEGORY_MASTER] (
+                    [I_CAT_CODE] INT PRIMARY KEY IDENTITY(1,1),
+                    [I_CAT_NAME] NVARCHAR(50) NOT NULL,
+                    [I_CAT_CM_COMP_ID] INT NOT NULL,
+                    [I_CAT_SHORTCLOSE] BIT DEFAULT 0,
+                    [ES_DELETE] BIT DEFAULT 0,
+                    [MODIFY] DATETIME DEFAULT GETDATE(),
+                    [ICM_CODE] INT, -- Keep for compatibility
+                    [ICM_NAME] NVARCHAR(255),
+                    [ICM_COMPANY_ID] INT,
+                    [ICM_ACTIVE_IND] BIT DEFAULT 1,
+                    [ICM_CREATED_DATE] DATETIME DEFAULT GETDATE(),
+                    [ICM_MODIFIED_DATE] DATETIME DEFAULT GETDATE(),
+                    FOREIGN KEY ([I_CAT_CM_COMP_ID]) REFERENCES [COMPANY_MASTER]([CM_ID])
+                )
+            END",
+
+            // ITEM_MASTER table — after ITEM_CATEGORY_MASTER (FK dependency)
             @"
             IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[ITEM_MASTER]') AND type in (N'U'))
             BEGIN
@@ -983,7 +1208,7 @@ public static class DatabaseSchemaDeployer
                     [I_CODENO] NVARCHAR(50),
                     [I_NAME] NVARCHAR(255) NOT NULL,
                     [I_DESCRIPTION] NVARCHAR(MAX),
-                    [I_CAT_CODE] INT, -- Category code reference
+                    [I_CAT_CODE] INT,
                     [ES_DELETE] BIT DEFAULT 0,
                     [I_ACTIVE_IND] BIT DEFAULT 1,
                     [I_CREATED_DATE] DATETIME DEFAULT GETDATE(),
@@ -992,7 +1217,7 @@ public static class DatabaseSchemaDeployer
                 )
             END",
 
-            // ITEM_UNIT_MASTER table - matches stored procedure schema
+            // ITEM_UNIT_MASTER table
             @"
             IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[ITEM_UNIT_MASTER]') AND type in (N'U'))
             BEGIN
@@ -1020,27 +1245,6 @@ public static class DatabaseSchemaDeployer
                     [UM_ACTIVE_IND] BIT DEFAULT 1,
                     [UM_CREATED_DATE] DATETIME DEFAULT GETDATE(),
                     [UM_MODIFIED_DATE] DATETIME DEFAULT GETDATE()
-                )
-            END",
-
-            // ITEM_CATEGORY_MASTER table - matches stored procedure schema
-            @"
-            IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[ITEM_CATEGORY_MASTER]') AND type in (N'U'))
-            BEGIN
-                CREATE TABLE [dbo].[ITEM_CATEGORY_MASTER] (
-                    [I_CAT_CODE] INT PRIMARY KEY IDENTITY(1,1),
-                    [I_CAT_NAME] NVARCHAR(50) NOT NULL,
-                    [I_CAT_CM_COMP_ID] INT NOT NULL,
-                    [I_CAT_SHORTCLOSE] BIT DEFAULT 0,
-                    [ES_DELETE] BIT DEFAULT 0,
-                    [MODIFY] DATETIME DEFAULT GETDATE(),
-                    [ICM_CODE] INT, -- Keep for compatibility
-                    [ICM_NAME] NVARCHAR(255),
-                    [ICM_COMPANY_ID] INT,
-                    [ICM_ACTIVE_IND] BIT DEFAULT 1,
-                    [ICM_CREATED_DATE] DATETIME DEFAULT GETDATE(),
-                    [ICM_MODIFIED_DATE] DATETIME DEFAULT GETDATE(),
-                    FOREIGN KEY ([I_CAT_CM_COMP_ID]) REFERENCES [COMPANY_MASTER]([CM_ID])
                 )
             END",
 
@@ -1117,6 +1321,41 @@ public static class DatabaseSchemaDeployer
                     INSERT INTO [dbo].[USER_MASTER] ([UM_USERNAME], [UM_PASSWORD], [UM_NAME], [UM_EMAIL], [UM_CM_ID], [IS_ACTIVE], [UM_IS_ADMIN], [ES_DELETE])
                     VALUES ('TestUser', '', 'Test User', 'test@test.com', 1, 1, 1, 0)
                 END
+            END",
+
+            // USER_RIGHT table — legacy permission bitmask store (read by ERP_GetUserPermissions)
+            @"
+            IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[USER_RIGHT]') AND type in (N'U'))
+            BEGIN
+                CREATE TABLE [dbo].[USER_RIGHT] (
+                    [UR_CODE]       INT IDENTITY(1,1) PRIMARY KEY,
+                    [UR_UM_CODE]    INT NOT NULL,
+                    [UR_SM_CODE]    INT NOT NULL,
+                    [UR_RIGHTS]     NVARCHAR(7) NOT NULL DEFAULT '0000000',
+                    [UR_IS_DELETE]  BIT NOT NULL DEFAULT 0
+                )
+            END",
+
+            // USER_REFRESH_TOKEN table — JWT refresh token store
+            @"
+            IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[USER_REFRESH_TOKEN]') AND type in (N'U'))
+            BEGIN
+                CREATE TABLE [dbo].[USER_REFRESH_TOKEN] (
+                    [URT_CODE]        INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_USER_REFRESH_TOKEN PRIMARY KEY CLUSTERED,
+                    [URT_UM_CODE]     INT           NOT NULL,
+                    [URT_TOKEN_HASH]  NVARCHAR(500) NOT NULL,
+                    [URT_EXPIRES_AT]  DATETIME2     NOT NULL,
+                    [URT_IS_REVOKED]  BIT           NOT NULL CONSTRAINT DF_URT_IS_REVOKED DEFAULT 0,
+                    [URT_CREATED_AT]  DATETIME2     NOT NULL CONSTRAINT DF_URT_CREATED_AT DEFAULT GETUTCDATE(),
+                    [URT_REPLACED_BY] NVARCHAR(500) NULL,
+                    [URT_IP_ADDRESS]  NVARCHAR(50)  NULL,
+                    [URT_USER_AGENT]  NVARCHAR(500) NULL
+                )
+                CREATE NONCLUSTERED INDEX IX_USER_REFRESH_TOKEN_HASH
+                    ON [dbo].[USER_REFRESH_TOKEN] ([URT_TOKEN_HASH])
+                    WHERE [URT_IS_REVOKED] = 0
+                CREATE NONCLUSTERED INDEX IX_USER_REFRESH_TOKEN_UM_CODE
+                    ON [dbo].[USER_REFRESH_TOKEN] ([URT_UM_CODE])
             END",
 
             // ROLES table
@@ -1260,7 +1499,7 @@ public static class DatabaseSchemaDeployer
                     [UserName] NVARCHAR(100),
                     [UserRole] NVARCHAR(50),
                     [CompanyId] NVARCHAR(50),
-                    [IpAddress] NVARCHAR(100) NOT NULL DEFAULT '',
+                    [IpAddress] NVARCHAR(100) NULL DEFAULT '',
                     [UserAgent] NVARCHAR(500),
                     [Endpoint] NVARCHAR(200),
                     [HttpMethod] NVARCHAR(10),

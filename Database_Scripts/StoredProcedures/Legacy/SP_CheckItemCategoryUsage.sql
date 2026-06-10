@@ -1,0 +1,11 @@
+﻿CREATE OR ALTER PROCEDURE [dbo].[SP_CheckItemCategoryUsage]
+    @I_CAT_CODE INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    SELECT COUNT(*) AS Count
+    FROM ITEM_MASTER
+    WHERE I_CAT_CODE = @I_CAT_CODE
+      AND ES_DELETE = 0;
+END

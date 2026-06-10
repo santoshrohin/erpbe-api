@@ -3,7 +3,7 @@
 -- Create date: 2025-01-24
 -- Description: Creates a new Tax Invoice with ALL fields
 -- =============================================
-CREATE PROCEDURE [dbo].[ERP_CreateTaxInvoice]
+CREATE or alter PROCEDURE [dbo].[ERP_CreateTaxInvoice]
     -- Basic Details
     @CompanyCode INT,
     @InvoiceNumber INT,
@@ -163,9 +163,10 @@ CREATE PROCEDURE [dbo].[ERP_CreateTaxInvoice]
     @TermsAndConditions VARCHAR(MAX) = NULL,
     @AuthorizedName VARCHAR(200) = NULL,
     @AddressSelected INT = NULL,
-    
+    @ParentInvoiceCode INT = NULL,
+
     -- Output Parameter
-    @NewInvoiceCode INT OUTPUT
+    @NewInvoiceCode BIGINT OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -203,6 +204,7 @@ BEGIN
             INM_REMOVEL_TIME, INM_LC_NO, INM_LC_DATE, INM_TRANSPORT_OWNER, INM_TRANSPORT_ADDRESS,
             INM_TNO, INM_TRAY_CODE, INM_TRAY_QTY, INM_ADDRESS, INM_STATE,
             INM_HSN_CODE, INM_ELECTRREFNUM, INM_TERMSNCONDITIONS, INM_AUTHORIZEDNAME, INM_ADDRESS_SELECTED,
+            INM_PARENT_CODE,
             ES_DELETE, MODIFY
         )
         VALUES (
@@ -236,6 +238,7 @@ BEGIN
             @RemovalTime, @LcNumber, @LcDate, @TransportOwner, @TransportAddress,
             @TNumber, @TrayCode, @TrayQuantity, @Address, @StateCode,
             @HsnCode, @ElectronicReferenceNumber, @TermsAndConditions, @AuthorizedName, @AddressSelected,
+            @ParentInvoiceCode,
             0, 0
         );
 

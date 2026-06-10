@@ -1,0 +1,28 @@
+﻿CREATE OR ALTER PROCEDURE [dbo].[SP_ITEM_UNIT_MASTER_Insert]
+
+
+@I_UOM_CM_COMP_ID int,
+@I_UOM_NAME varchar(50),
+@I_UOM_DESC varchar(50),
+@ES_DELETE bit,
+@MODIFY bit
+
+AS
+
+Insert into ITEM_UNIT_MASTER
+(
+I_UOM_CM_COMP_ID,
+I_UOM_NAME,
+I_UOM_DESC,
+ES_DELETE,
+MODIFY
+)
+values
+(
+@I_UOM_CM_COMP_ID,
+@I_UOM_NAME,
+@I_UOM_DESC,
+@ES_DELETE,
+@MODIFY
+
+)

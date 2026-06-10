@@ -3,7 +3,7 @@ using ErpBE.Application.Common.Models;
 using ErpBE.Application.DTOs;
 using ErpBE.Application.Interfaces;
 using System.Data;
-using System.Data.SqlClient;
+using Microsoft.Data.SqlClient;
 
 namespace ErpBE.Infrastructure.Repositories
 {

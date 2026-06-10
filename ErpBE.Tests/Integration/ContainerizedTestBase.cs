@@ -68,7 +68,7 @@ namespace ErpBE.Tests.Integration
             var responseContent = await response.Content.ReadAsStringAsync();
             var result = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(responseContent);
             
-            return result.GetProperty("token").GetString()!;
+            return result.GetProperty("accessToken").GetString()!;
         }
     }
 }

@@ -22,6 +22,7 @@ using ErpBE.Infrastructure.Auth;
 using ErpBE.Infrastructure.Common;
 using ErpBE.Infrastructure.Repositories;
 using ErpBE.Infrastructure.Services;
+using ErpBE.Application.Interfaces;
 using NSubstitute;
 
 namespace ErpBE.Tests.Integration;
@@ -111,9 +112,15 @@ public static class ServiceConfiguration
             return new SqlConnection(connectionString);
         });
 
+        // HTTP context (required by CompanyContext which reads JWT claims)
+        services.AddHttpContextAccessor();
+
         // Application-specific services
         services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
         services.AddScoped<ILoginRepository, LoginRepository>();
+        services.AddScoped<IPermissionLoader, PermissionLoader>();
+        services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+        services.AddScoped<ICompanyContext, CompanyContext>();
         services.AddScoped<IDropdownRepository, DropdownRepository>();
 
         // Audit services
@@ -154,6 +161,24 @@ public static class ServiceConfiguration
 
         // Logs Repository
         services.AddScoped<ILogsRepository, LogsRepository>();
+
+        // Activity log (LOG_MASTER — cross-system audit trail)
+        services.AddScoped<IActivityLogService, ActivityLogService>();
+
+        // Delivery Challan services
+        services.AddScoped<IDeliveryChallanRepository, DeliveryChallanRepository>();
+
+        // Labour Charge Invoice services
+        services.AddScoped<ILabourChargeInvoiceRepository, LabourChargeInvoiceRepository>();
+
+        // Issue Master services
+        services.AddScoped<IIssueMasterRepository, IssueMasterRepository>();
+
+        // Production To Store services
+        services.AddScoped<IProductionToStoreRepository, ProductionToStoreRepository>();
+
+        // User Rights
+        services.AddScoped<IUserRightRepository, UserRightRepository>();
 
         // JWT Authentication
         var jwtSettings = configuration.GetSection("JwtSettings");

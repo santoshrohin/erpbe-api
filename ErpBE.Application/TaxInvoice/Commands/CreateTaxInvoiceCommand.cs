@@ -22,6 +22,7 @@ namespace ErpBE.Application.TaxInvoice.Commands
         public DateTime? DateFrom { get; set; }
         public DateTime? DateTo { get; set; }
         public bool? IsSupplementary { get; set; }
+        public int? ParentInvoiceCode { get; set; }
         public string? Process { get; set; }
         
         #endregion

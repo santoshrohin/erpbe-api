@@ -4,7 +4,7 @@
 -- Description: Updates an existing Tax Invoice (all fields)
 -- =============================================
 ALTER PROCEDURE [dbo].[ERP_UpdateTaxInvoice]
-    @InvoiceCode INT,
+    @InvoiceCode BIGINT,
     -- (Same parameters as Create, except @InvoiceNumber which doesn't change)
     @CompanyCode INT,
     @InvoiceDate DATETIME,

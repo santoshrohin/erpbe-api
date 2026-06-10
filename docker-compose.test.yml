@@ -1,0 +1,158 @@
+###############################################################################
+# ERP E2E Test Stack — Full isolation from development database
+#
+# Usage:
+#   docker compose -f docker-compose.test.yml up --build --abort-on-container-exit
+#
+# Or step by step:
+#   docker compose -f docker-compose.test.yml up db api frontend -d
+#   cd e2e && npm install && npm test
+#   docker compose -f docker-compose.test.yml down -v
+#
+# One-command:
+#   ./scripts/run-e2e.sh
+###############################################################################
+
+version: '3.9'
+
+services:
+
+  # ── SQL Server ───────────────────────────────────────────────────────────────
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: erp_test_db
+    environment:
+      SA_PASSWORD: "TestPassword123!"
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: "Developer"
+    ports:
+      - "1434:1433"   # 1434 to avoid conflict with any local SQL Server
+    healthcheck:
+      test: |
+        /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "TestPassword123!" \
+        -C -Q "SELECT 1" || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
+    volumes:
+      - erp_test_db_data:/var/opt/mssql
+    networks:
+      - erp_test_net
+
+  # ── Database initializer — runs once then exits ───────────────────────────────
+  db-init:
+    image: mcr.microsoft.com/mssql-tools18
+    container_name: erp_test_db_init
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./Database_Scripts:/scripts
+      - ./e2e/data:/seed
+    command: >
+      bash -c "
+        echo '=== Deploying schema ===' &&
+        /opt/mssql-tools18/bin/sqlcmd -S db -U sa -P 'TestPassword123!' -C \
+          -Q 'CREATE DATABASE ErpTestDB' &&
+        /opt/mssql-tools18/bin/sqlcmd -S db -U sa -P 'TestPassword123!' -C -d ErpTestDB \
+          -i /scripts/EntireDatabase/EntireDatabaseScript.sql &&
+        echo '=== Deploying stored procedures ===' &&
+        find /scripts/StoredProcedures -name '*.sql' | sort | while read f; do
+          /opt/mssql-tools18/bin/sqlcmd -S db -U sa -P 'TestPassword123!' -C -d ErpTestDB -i \"\$f\" 2>&1 | grep -v '^$' || true
+        done &&
+        echo '=== Seeding reference data ===' &&
+        /opt/mssql-tools18/bin/sqlcmd -S db -U sa -P 'TestPassword123!' -C -d ErpTestDB \
+          -i /seed/01-reference-data.sql &&
+        echo '=== Seeding test fixtures ===' &&
+        /opt/mssql-tools18/bin/sqlcmd -S db -U sa -P 'TestPassword123!' -C -d ErpTestDB \
+          -i /seed/02-test-fixtures.sql &&
+        echo '=== Database ready ==='
+      "
+    networks:
+      - erp_test_net
+
+  # ── .NET API ─────────────────────────────────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: ErpBE.API/Dockerfile
+    container_name: erp_test_api
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+    environment:
+      ASPNETCORE_ENVIRONMENT: Test
+      ConnectionStrings__DefaultConnection: >-
+        Server=db;Database=ErpTestDB;User Id=sa;Password=TestPassword123!;
+        TrustServerCertificate=True;
+      JWTSETTINGS__SECRET: "E2E-Test-Secret-32chars-minimum!!!"
+      JWTSETTINGS__ACCESSTOKENEXPIRYMINUTES: "480"
+      CORS__ALLOWEDORIGIN: "http://frontend:80"
+      EnableSwaggerInProduction: "true"
+    ports:
+      - "5136:80"
+    healthcheck:
+      test: curl -sf http://localhost:80/swagger/v1/swagger.json || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
+    networks:
+      - erp_test_net
+
+  # ── React frontend ────────────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ../FE_React
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: "http://localhost:5136/api"
+    container_name: erp_test_frontend
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "5173:80"
+    healthcheck:
+      test: wget -qO- http://localhost:80/ || exit 1
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - erp_test_net
+
+  # ── Playwright — only runs in CI mode ────────────────────────────────────────
+  playwright:
+    image: mcr.microsoft.com/playwright:v1.49-jammy
+    container_name: erp_test_playwright
+    depends_on:
+      frontend:
+        condition: service_healthy
+    working_dir: /e2e
+    volumes:
+      - ./e2e:/e2e
+      - ./e2e/playwright-report:/e2e/playwright-report
+    command: bash -c "npm install && npx playwright install chromium && npm test -- --reporter=list"
+    environment:
+      BASE_URL: "http://frontend:80"
+      API_URL: "http://api:80/api"
+      DB_SERVER: "db"
+      DB_DATABASE: "ErpTestDB"
+      DB_USER: "sa"
+      DB_PASSWORD: "TestPassword123!"
+      TEST_USERNAME: "TestUser"
+      TEST_PASSWORD: "Test@123"
+      TEST_COMPANY_ID: "1"
+      TEST_FY_CODE: "-2147483641"
+    networks:
+      - erp_test_net
+    profiles:
+      - ci   # only starts when: docker compose --profile ci up
+
+volumes:
+  erp_test_db_data:
+
+networks:
+  erp_test_net:
+    driver: bridge

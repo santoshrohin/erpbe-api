@@ -3,9 +3,9 @@
 -- Create date: 2025-10-24
 -- Description: Manages stock for Tax Invoice (INSERT/UPDATE/DELETE operations)
 -- =============================================
-CREATE PROCEDURE [dbo].[ERP_ManageTaxInvoiceStock]
+CREATE or alter PROCEDURE [dbo].[ERP_ManageTaxInvoiceStock]
     @Operation VARCHAR(10), -- 'INSERT', 'UPDATE', 'DELETE'
-    @InvoiceCode INT,
+    @InvoiceCode BIGINT,
     @InvoiceDate DATETIME,
     @ItemCode INT,
     @Quantity FLOAT
@@ -17,19 +17,22 @@ BEGIN
         IF @Operation = 'INSERT'
         BEGIN
             -- Insert stock OUT entry (negative quantity for sales)
+            -- STL_STORE_TYPE = -2147483648 is the default store type used by ERP_GetTaxInvoiceItemDetails
             INSERT INTO STOCK_LEDGER (
-                STL_I_CODE, 
-                STL_DOC_NO, 
-                STL_DOC_TYPE, 
-                STL_DOC_DATE, 
-                STL_DOC_QTY
+                STL_I_CODE,
+                STL_DOC_NO,
+                STL_DOC_TYPE,
+                STL_DOC_DATE,
+                STL_DOC_QTY,
+                STL_STORE_TYPE
             )
             VALUES (
                 @ItemCode,
                 @InvoiceCode,
                 'TAXINV',
                 @InvoiceDate,
-                -@Quantity  -- Negative for stock OUT
+                -@Quantity,  -- Negative for stock OUT
+                -2147483648  -- Default store type (matches ERP_GetTaxInvoiceItemDetails filter)
             );
         END
         ELSE IF @Operation = 'DELETE'
@@ -51,18 +54,20 @@ BEGIN
             
             -- Insert new entry
             INSERT INTO STOCK_LEDGER (
-                STL_I_CODE, 
-                STL_DOC_NO, 
-                STL_DOC_TYPE, 
-                STL_DOC_DATE, 
-                STL_DOC_QTY
+                STL_I_CODE,
+                STL_DOC_NO,
+                STL_DOC_TYPE,
+                STL_DOC_DATE,
+                STL_DOC_QTY,
+                STL_STORE_TYPE
             )
             VALUES (
                 @ItemCode,
                 @InvoiceCode,
                 'TAXINV',
                 @InvoiceDate,
-                -@Quantity  -- Negative for stock OUT
+                -@Quantity,  -- Negative for stock OUT
+                -2147483648  -- Default store type (matches ERP_GetTaxInvoiceItemDetails filter)
             );
         END
 

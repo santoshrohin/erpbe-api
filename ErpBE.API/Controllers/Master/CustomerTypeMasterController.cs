@@ -1,7 +1,9 @@
+using ErpBE.API.Common;
 using ErpBE.Application.Common.Models;
 using ErpBE.Application.CustomerTypeMaster.Commands;
 using ErpBE.Application.CustomerTypeMaster.Queries;
 using ErpBE.Application.DTOs;
+using ErpBE.Domain.Common;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -28,6 +30,7 @@ namespace ErpBE.API.Controllers.Master
         /// Get all customer type masters with pagination, filtering, and sorting
         /// </summary>
         [HttpGet]
+        [RequirePermission(ModuleCodes.Masters, PermissionBit.View)]
         [ProducesResponseType(typeof(PagedResponse<CustomerTypeMasterDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<ActionResult<PagedResponse<CustomerTypeMasterDto>>> GetCustomerTypeMasters(
@@ -43,6 +46,7 @@ namespace ErpBE.API.Controllers.Master
         /// Get customer type master by ID
         /// </summary>
         [HttpGet("{id}")]
+        [RequirePermission(ModuleCodes.Masters, PermissionBit.View)]
         [ProducesResponseType(typeof(CustomerTypeMasterDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<CustomerTypeMasterDto>> GetCustomerTypeMasterById(
@@ -65,6 +69,7 @@ namespace ErpBE.API.Controllers.Master
         /// Get customer type master by type code
         /// </summary>
         [HttpGet("byTypeCode/{typeCode}")]
+        [RequirePermission(ModuleCodes.Masters, PermissionBit.View)]
         [ProducesResponseType(typeof(CustomerTypeMasterDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<CustomerTypeMasterDto>> GetCustomerTypeMasterByTypeCode(
@@ -91,6 +96,7 @@ namespace ErpBE.API.Controllers.Master
         /// Check if type code is unique
         /// </summary>
         [HttpGet("checkUnique")]
+        [RequirePermission(ModuleCodes.Masters, PermissionBit.View)]
         [ProducesResponseType(typeof(bool), StatusCodes.Status200OK)]
         public async Task<ActionResult<bool>> CheckTypeCodeUnique(
             [FromQuery] string typeCode,
@@ -112,6 +118,7 @@ namespace ErpBE.API.Controllers.Master
         /// Create a new customer type master
         /// </summary>
         [HttpPost]
+        [RequirePermission(ModuleCodes.Masters, PermissionBit.Add)]
         [ProducesResponseType(typeof(CustomerTypeMasterDto), StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<ActionResult<CustomerTypeMasterDto>> CreateCustomerTypeMaster(
@@ -137,6 +144,7 @@ namespace ErpBE.API.Controllers.Master
         /// Update an existing customer type master
         /// </summary>
         [HttpPut("{id}")]
+        [RequirePermission(ModuleCodes.Masters, PermissionBit.Edit)]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -162,6 +170,7 @@ namespace ErpBE.API.Controllers.Master
         /// Delete a customer type master (soft delete)
         /// </summary>
         [HttpDelete("{id}")]
+        [RequirePermission(ModuleCodes.Masters, PermissionBit.Delete)]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]

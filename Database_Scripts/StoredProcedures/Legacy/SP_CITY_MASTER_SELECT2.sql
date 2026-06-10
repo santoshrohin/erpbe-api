@@ -1,0 +1,56 @@
+﻿CREATE OR ALTER PROCEDURE [dbo].[SP_CITY_MASTER_SELECT2]
+
+@CITY_CODE int,
+@CITY_CM_COMP_ID int,
+@CITY_COUNTRY_CODE int,
+@CITY_SM_CODE int,
+@CITY_NAME varchar(100),
+@ES_DELETE bit,
+@MODIFY bit,
+@TYPE VARCHAR(50)
+
+AS
+if @TYPE='CHECKUPDATE'
+begin
+Select 
+CITY_CODE,
+CITY_CM_COMP_ID,
+CITY_COUNTRY_CODE,
+CITY_SM_CODE,
+CITY_NAME,
+ES_DELETE,
+MODIFY
+
+from CITY_MASTER
+
+where 
+( @CITY_CODE is null or @CITY_CODE != CITY_CODE ) and
+( @CITY_CM_COMP_ID is null or @CITY_CM_COMP_ID = CITY_CM_COMP_ID ) and
+( @CITY_SM_CODE is null or @CITY_SM_CODE = CITY_SM_CODE ) and
+( @CITY_NAME is null or @CITY_NAME = CITY_NAME ) and
+( @ES_DELETE is null or @ES_DELETE = ES_DELETE ) and
+ @ES_DELETE = ES_DELETE
+end
+else
+begin
+Select 
+
+CITY_CODE,
+CITY_CM_COMP_ID,
+CITY_COUNTRY_CODE,
+CITY_SM_CODE,
+CITY_NAME,
+ES_DELETE,
+MODIFY
+from CITY_MASTER
+
+
+where 
+( @CITY_CODE is null or @CITY_CODE = CITY_CODE ) and
+( @CITY_CM_COMP_ID is null or @CITY_CM_COMP_ID = CITY_CM_COMP_ID ) and
+( @CITY_NAME is null or @CITY_NAME = CITY_NAME ) and
+( @CITY_SM_CODE is null or @CITY_SM_CODE != CITY_SM_CODE ) and
+
+( @ES_DELETE is null or @ES_DELETE = ES_DELETE ) and
+ @ES_DELETE = ES_DELETE
+end

@@ -2,6 +2,15 @@
 {
     public interface IJwtTokenGenerator
     {
-        string GenerateToken(string username, string userId, int companyId, List<string>? roles = null);
+        /// <summary>
+        /// Generates a JWT access token containing all context and permission claims.
+        /// </summary>
+        string GenerateAccessToken(LoginResult user);
+
+        /// <summary>
+        /// Generates a cryptographically random refresh token value (plain text).
+        /// Caller is responsible for hashing before storing.
+        /// </summary>
+        string GenerateRefreshToken();
     }
 }

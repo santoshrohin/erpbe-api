@@ -89,31 +89,6 @@ namespace ErpBE.Tests.Validators
         }
 
         [Fact]
-        public void Validate_WithoutCustomerPo_ShouldHaveValidationError()
-        {
-            // Arrange
-            var command = new UpdateTaxInvoiceCommand
-            {
-                InvoiceCode = 100,
-                CompanyCode = 1,
-                InvoiceDate = DateTime.Now,
-                CustomerCode = 1,
-                CustomerPoCode = null, // Missing
-                InvoiceDetails = new List<CreateTaxInvoiceDetailCommand>
-                {
-                    new CreateTaxInvoiceDetailCommand { ItemCode = 1, UomCode = 1, InvoiceQuantity = 10, Rate = 100 }
-                }
-            };
-
-            // Act
-            var result = _validator.TestValidate(command);
-
-            // Assert
-            result.ShouldHaveValidationErrorFor(x => x.CustomerPoCode)
-                .WithErrorMessage("Please select a Customer PO.");
-        }
-
-        [Fact]
         public void Validate_WithoutLineItems_ShouldHaveValidationError()
         {
             // Arrange

@@ -1,0 +1,12 @@
+﻿CREATE OR ALTER PROCEDURE [dbo].[SP_SECTOR_MASTER_Delete]
+
+@SCT_CODE int
+
+AS
+
+Update 
+SECTOR_MASTER
+
+set ES_DELETE = 1
+
+where SCT_CODE=@SCT_CODE

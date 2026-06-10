@@ -1,0 +1,10 @@
+﻿CREATE OR ALTER PROCEDURE [dbo].[SP_CheckEmailExists]
+    @Email VARCHAR(100)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    SELECT COUNT(*)
+    FROM [USER_MASTER]
+    WHERE [UM_EMAIL] = @Email AND [ES_DELETE] = 0
+END

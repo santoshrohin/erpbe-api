@@ -1,8 +1,10 @@
+using ErpBE.API.Common;
 using ErpBE.Application.Common.Models;
 using ErpBE.Application.DTOs;
 using ErpBE.Application.SoTypeMaster.Commands;
 using ErpBE.Application.SoTypeMaster.Queries;
 using ErpBE.Application.SoTypeMaster.Validators;
+using ErpBE.Domain.Common;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -25,7 +27,7 @@ namespace ErpBE.API.Controllers.Master
         /// Get all SO Type Masters with pagination, filtering, and sorting
         /// </summary>
         [HttpGet]
-        [Authorize(Roles = "Admin,SalesManager,ReadOnlyManager")]
+        [RequirePermission(ModuleCodes.Masters, PermissionBit.View)]
         public async Task<IActionResult> GetSoTypeMasters([FromQuery] SoTypeMasterQueryParameters queryParameters)
         {
             var validator = new SoTypeMasterQueryParametersValidator();
@@ -50,7 +52,7 @@ namespace ErpBE.API.Controllers.Master
         /// Get SO Type Master by ID
         /// </summary>
         [HttpGet("{id}")]
-        [Authorize(Roles = "Admin,SalesManager,ReadOnlyManager")]
+        [RequirePermission(ModuleCodes.Masters, PermissionBit.View)]
         public async Task<IActionResult> GetSoTypeMasterById(int id)
         {
             var query = new GetSoTypeMasterByIdQuery { Id = id };
@@ -62,7 +64,7 @@ namespace ErpBE.API.Controllers.Master
         /// Get SO Type Master by Short Name
         /// </summary>
         [HttpGet("by-name/{shortName}")]
-        [Authorize(Roles = "Admin,SalesManager,ReadOnlyManager")]
+        [RequirePermission(ModuleCodes.Masters, PermissionBit.View)]
         public async Task<IActionResult> GetSoTypeMasterByShortName(string shortName, [FromQuery] int companyId)
         {
             var query = new GetSoTypeMasterByShortNameQuery
@@ -78,7 +80,7 @@ namespace ErpBE.API.Controllers.Master
         /// Check if Short Name is unique
         /// </summary>
         [HttpGet("check-unique")]
-        [Authorize(Roles = "Admin,SalesManager")]
+        [RequirePermission(ModuleCodes.Masters, PermissionBit.View)]
         public async Task<IActionResult> CheckShortNameUnique([FromQuery] string shortName, [FromQuery] int companyId, [FromQuery] int? excludeId = null)
         {
             var query = new CheckSoTypeShortNameUniqueQuery
@@ -95,7 +97,7 @@ namespace ErpBE.API.Controllers.Master
         /// Create a new SO Type Master
         /// </summary>
         [HttpPost]
-        [Authorize(Roles = "Admin,SalesManager")]
+        [RequirePermission(ModuleCodes.Masters, PermissionBit.Add)]
         public async Task<IActionResult> CreateSoTypeMaster([FromBody] CreateSoTypeMasterRequest request)
         {
             var validator = new CreateSoTypeMasterRequestValidator();
@@ -120,7 +122,7 @@ namespace ErpBE.API.Controllers.Master
         /// Update an existing SO Type Master
         /// </summary>
         [HttpPut("{id}")]
-        [Authorize(Roles = "Admin,SalesManager")]
+        [RequirePermission(ModuleCodes.Masters, PermissionBit.Edit)]
         public async Task<IActionResult> UpdateSoTypeMaster(int id, [FromBody] UpdateSoTypeMasterRequest request)
         {
             if (id != request.Id)
@@ -150,7 +152,7 @@ namespace ErpBE.API.Controllers.Master
         /// Delete an SO Type Master (soft delete)
         /// </summary>
         [HttpDelete("{id}")]
-        [Authorize(Roles = "Admin,SalesManager")]
+        [RequirePermission(ModuleCodes.Masters, PermissionBit.Delete)]
         public async Task<IActionResult> DeleteSoTypeMaster(int id)
         {
             var command = new DeleteSoTypeMasterCommand { Id = id };

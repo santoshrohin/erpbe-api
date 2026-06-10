@@ -1,7 +1,7 @@
 using Dapper;
 using ErpBE.Application.Interfaces;
 using Microsoft.Extensions.Configuration;
-using System.Data.SqlClient;
+using Microsoft.Data.SqlClient;
 
 namespace ErpBE.Infrastructure.Repositories
 {

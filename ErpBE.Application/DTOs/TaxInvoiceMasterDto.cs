@@ -8,7 +8,7 @@ namespace ErpBE.Application.DTOs
     {
         #region Primary & Basic Details (10 fields)
         
-        public int InvoiceCode { get; set; } // INM_CODE (PK)
+        public long InvoiceCode { get; set; } // INM_CODE (PK)
         public int? CompanyCode { get; set; } // INM_CM_CODE
         public int? InvoiceNumber { get; set; } // INM_NO
         public DateTime? InvoiceDate { get; set; } // INM_DATE
@@ -25,6 +25,7 @@ namespace ErpBE.Application.DTOs
         
         public int? CustomerPoCode { get; set; } // INM_CPOM_CODE
         public bool? IsSupplementary { get; set; } // INM_SUPPLEMENTORY
+        public int? ParentInvoiceCode { get; set; } // INM_PARENT_CODE (supplementary parent link)
         public string? Process { get; set; } // INM_PROCESS
         
         #endregion
@@ -85,6 +86,7 @@ namespace ErpBE.Application.DTOs
         
         public bool? IsDeleted { get; set; } // ES_DELETE
         public bool? IsModifyLocked { get; set; } // MODIFY
+        public bool? IsApproved { get; set; } // INM_IS_AUTHORIZED
         
         #endregion
         

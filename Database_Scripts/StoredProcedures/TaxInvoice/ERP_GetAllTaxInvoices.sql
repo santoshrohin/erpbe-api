@@ -3,7 +3,7 @@
 -- Create date: 2025-01-24
 -- Description: Gets all Tax Invoices with filtering, searching, sorting, and pagination
 -- =============================================
-CREATE PROCEDURE [dbo].[ERP_GetAllTaxInvoices]
+CREATE or Alter PROCEDURE [dbo].[ERP_GetAllTaxInvoices]
     @CompanyId INT,
     @CustomerId INT = NULL,
     @CustomerPoCode INT = NULL,
@@ -29,7 +29,8 @@ BEGIN
     -- Build dynamic WHERE clause
     DECLARE @SQL NVARCHAR(MAX);
     DECLARE @CountSQL NVARCHAR(MAX);
-    DECLARE @WhereClause NVARCHAR(MAX) = 'WHERE I.INM_CM_CODE = @CompanyId';
+    -- INM_INVOICE_TYPE=0 and INM_TYPE='TAXINV' matches legacy LoadInvoice filter
+    DECLARE @WhereClause NVARCHAR(MAX) = 'WHERE I.INM_CM_CODE = @CompanyId AND I.INM_INVOICE_TYPE = 0 AND ISNULL(I.INM_TYPE, '''') = ''TAXINV''';
 
     IF @CustomerId IS NOT NULL
         SET @WhereClause = @WhereClause + ' AND I.INM_P_CODE = @CustomerId';
@@ -46,8 +47,7 @@ BEGIN
     IF @InvoiceNumber IS NOT NULL
         SET @WhereClause = @WhereClause + ' AND CAST(I.INM_NO AS VARCHAR) LIKE ''%'' + @InvoiceNumber + ''%''';
 
-    IF @InvoiceType IS NOT NULL
-        SET @WhereClause = @WhereClause + ' AND I.INM_INVOICE_TYPE = @InvoiceType';
+    -- INM_INVOICE_TYPE is now always fixed to 0 (Tax Invoice) in the base WHERE clause above
 
     IF @IsDeleted IS NOT NULL
         SET @WhereClause = @WhereClause + ' AND I.ES_DELETE = @IsDeleted';

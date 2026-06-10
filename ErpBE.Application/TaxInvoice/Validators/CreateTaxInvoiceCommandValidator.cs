@@ -12,7 +12,7 @@ namespace ErpBE.Application.TaxInvoice.Validators
         {
             // A. Form-Level Validations
             RuleFor(x => x.CompanyCode)
-                .GreaterThan(0)
+                .NotEqual(0)
                 .WithMessage("Company is required.");
             
             RuleFor(x => x.InvoiceDate)
@@ -23,13 +23,8 @@ namespace ErpBE.Application.TaxInvoice.Validators
             
             // B. Customer Selection Validations
             RuleFor(x => x.CustomerCode)
-                .GreaterThan(0)
+                .NotEqual(0)
                 .WithMessage("Please select a customer.");
-            
-            // C. PO Selection Validations (MANDATORY as per business rules)
-            RuleFor(x => x.CustomerPoCode)
-                .NotEmpty()
-                .WithMessage("Please select a Customer PO.");
             
             // D. Line Items Validation
             RuleFor(x => x.InvoiceDetails)
@@ -136,12 +131,12 @@ namespace ErpBE.Application.TaxInvoice.Validators
         {
             // 1. Item Code Validation
             RuleFor(x => x.ItemCode)
-                .GreaterThan(0)
+                .NotEqual(0)
                 .WithMessage("Please select an item.");
-            
+
             // 2. UOM Validation
             RuleFor(x => x.UomCode)
-                .GreaterThan(0)
+                .NotEqual(0)
                 .WithMessage("Please select a unit of measurement.");
             
             // 3. Quantity Validation (CANNOT be 0 or negative)

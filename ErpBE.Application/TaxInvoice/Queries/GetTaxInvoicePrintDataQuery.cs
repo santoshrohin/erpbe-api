@@ -8,7 +8,7 @@ namespace ErpBE.Application.TaxInvoice.Queries;
 /// </summary>
 public class GetTaxInvoicePrintDataQuery : IRequest<TaxInvoicePrintDto?>
 {
-    public int InvoiceCode { get; set; }
+    public long InvoiceCode { get; set; }
     public int CompanyId { get; set; }
     public InvoiceCopyType CopyType { get; set; } = InvoiceCopyType.Original;
 }

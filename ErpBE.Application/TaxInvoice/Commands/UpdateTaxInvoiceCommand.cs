@@ -5,7 +5,7 @@ namespace ErpBE.Application.TaxInvoice.Commands
 {
     public class UpdateTaxInvoiceCommand : IRequest<TaxInvoiceMasterDto>
     {
-        public int InvoiceCode { get; set; } // PK - Required
+        public long InvoiceCode { get; set; } // PK - Required
         
         #region Basic Details (Required)
         

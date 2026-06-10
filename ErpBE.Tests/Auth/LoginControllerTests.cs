@@ -30,12 +30,9 @@ public class LoginControllerTests : IntegrationTestBase
 
         // Assert
         response.Should().NotBeNull();
-        response.Token.Should().NotBeNullOrEmpty();
+        response.AccessToken.Should().NotBeNullOrEmpty();
         response.Username.Should().Be("TestUser");
-        
-        // Verify TestUser has Admin role
-        response.Roles.Should().NotBeNullOrEmpty();
-        response.Roles.Should().Contain("Admin");
+        response.IsAdmin.Should().BeTrue();
     }
 
     [Fact]

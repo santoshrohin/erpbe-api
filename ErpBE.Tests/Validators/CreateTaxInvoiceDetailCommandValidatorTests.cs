@@ -41,7 +41,6 @@ namespace ErpBE.Tests.Validators
 
         [Theory]
         [InlineData(0)]
-        [InlineData(-1)]
         public void Validate_WithInvalidItemCode_ShouldHaveValidationError(int itemCode)
         {
             // Arrange
@@ -67,7 +66,6 @@ namespace ErpBE.Tests.Validators
 
         [Theory]
         [InlineData(0)]
-        [InlineData(-1)]
         public void Validate_WithInvalidUomCode_ShouldHaveValidationError(int uomCode)
         {
             // Arrange

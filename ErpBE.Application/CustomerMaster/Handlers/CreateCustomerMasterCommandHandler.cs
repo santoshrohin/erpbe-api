@@ -1,59 +1,81 @@
 using ErpBE.Application.CustomerMaster.Commands;
 using ErpBE.Application.CustomerMaster.Interfaces;
 using ErpBE.Application.DTOs;
+using ErpBE.Application.Interfaces;
+using ErpBE.Domain.Auth;
 using MediatR;
 
-namespace ErpBE.Application.CustomerMaster.Handlers
+namespace ErpBE.Application.CustomerMaster.Handlers;
+
+public class CreateCustomerMasterCommandHandler : IRequestHandler<CreateCustomerMasterCommand, CustomerMasterDto>
 {
-    public class CreateCustomerMasterCommandHandler : IRequestHandler<CreateCustomerMasterCommand, CustomerMasterDto>
+    private readonly ICustomerMasterRepository _repository;
+    private readonly IActivityLogService       _activityLog;
+    private readonly ICompanyContext           _ctx;
+
+    public CreateCustomerMasterCommandHandler(
+        ICustomerMasterRepository repository,
+        IActivityLogService       activityLog,
+        ICompanyContext           ctx)
     {
-        private readonly ICustomerMasterRepository _repository;
+        _repository  = repository;
+        _activityLog = activityLog;
+        _ctx         = ctx;
+    }
 
-        public CreateCustomerMasterCommandHandler(ICustomerMasterRepository repository)
+    public async Task<CustomerMasterDto> Handle(
+        CreateCustomerMasterCommand request,
+        CancellationToken cancellationToken)
+    {
+        var createRequest = new CreateCustomerMasterRequest
         {
-            _repository = repository;
-        }
+            CompanyId           = request.CompanyId,
+            PartyName           = request.PartyName,
+            ContactPerson       = request.ContactPerson,
+            Abbreviation        = request.Abbreviation,
+            VendorCode          = request.VendorCode,
+            Address             = request.Address,
+            Phone               = request.Phone,
+            Mobile              = request.Mobile,
+            Email               = request.Email,
+            FaxNo               = request.FaxNo,
+            PinCode             = request.PinCode,
+            AreaCode            = request.AreaCode,
+            CustomerType        = request.CustomerType,
+            CountryCode         = request.CountryCode,
+            StateCode           = request.StateCode,
+            CityCode            = request.CityCode,
+            CategoryCode        = request.CategoryCode,
+            EmployeeCode        = request.EmployeeCode,
+            PanNo               = request.PanNo,
+            CstNo               = request.CstNo,
+            VatNo               = request.VatNo,
+            ServiceTaxNo        = request.ServiceTaxNo,
+            EccNo               = request.EccNo,
+            LbtNo               = request.LbtNo,
+            ExciseRange         = request.ExciseRange,
+            ExciseDivision      = request.ExciseDivision,
+            ExciseCollectorate  = request.ExciseCollectorate,
+            TallyName           = request.TallyName,
+            CreditDays          = request.CreditDays,
+            TdsPercentage       = request.TdsPercentage,
+            IsActive            = request.IsActive,
+            IsLbtApplicable     = request.IsLbtApplicable
+        };
 
-        public async Task<CustomerMasterDto> Handle(CreateCustomerMasterCommand request, CancellationToken cancellationToken)
-        {
-            var createRequest = new CreateCustomerMasterRequest
-            {
-                CompanyId = request.CompanyId,
-                PartyName = request.PartyName,
-                ContactPerson = request.ContactPerson,
-                Abbreviation = request.Abbreviation,
-                VendorCode = request.VendorCode,
-                Address = request.Address,
-                Phone = request.Phone,
-                Mobile = request.Mobile,
-                Email = request.Email,
-                FaxNo = request.FaxNo,
-                PinCode = request.PinCode,
-                AreaCode = request.AreaCode,
-                CustomerType = request.CustomerType,
-                CountryCode = request.CountryCode,
-                StateCode = request.StateCode,
-                CityCode = request.CityCode,
-                CategoryCode = request.CategoryCode,
-                EmployeeCode = request.EmployeeCode,
-                PanNo = request.PanNo,
-                CstNo = request.CstNo,
-                VatNo = request.VatNo,
-                ServiceTaxNo = request.ServiceTaxNo,
-                EccNo = request.EccNo,
-                LbtNo = request.LbtNo,
-                ExciseRange = request.ExciseRange,
-                ExciseDivision = request.ExciseDivision,
-                ExciseCollectorate = request.ExciseCollectorate,
-                TallyName = request.TallyName,
-                CreditDays = request.CreditDays,
-                TdsPercentage = request.TdsPercentage,
-                IsActive = request.IsActive,
-                IsLbtApplicable = request.IsLbtApplicable
-            };
+        var result = await _repository.CreateAsync(createRequest);
 
-            return await _repository.CreateAsync(createRequest);
-        }
+        await _activityLog.WriteLogAsync(
+            companyId:   request.CompanyId,
+            source:      "CustomerMaster",
+            @event:      "INSERT",
+            docName:     "Customer Master",
+            docNo:       result.Abbreviation ?? result.PartyName ?? string.Empty,
+            docCode:     result.Id,
+            userName:    _ctx.Username,
+            userCode:    _ctx.UserCode,
+            cancellationToken: cancellationToken);
+
+        return result;
     }
 }
-

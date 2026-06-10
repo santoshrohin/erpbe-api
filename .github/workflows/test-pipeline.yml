@@ -29,3 +29,16 @@ jobs:
       run: dotnet test --no-build --configuration Release --logger "console;verbosity=normal"
       env:
         ConnectionStrings__DefaultConnection: "Server=SQL5111.site4now.net;Database=db_a2ea4b_sunv2;User Id=db_a2ea4b_sunv2_admin;Password=abcd@1234;TrustServerCertificate=true;"
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Install e2e dependencies
+      run: npm ci
+      working-directory: e2e
+
+    - name: Check coverage parity (UI + API + DB required per module)
+      run: node scripts/check-coverage-parity.cjs
+      working-directory: e2e

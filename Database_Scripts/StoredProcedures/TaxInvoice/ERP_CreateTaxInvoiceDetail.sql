@@ -4,7 +4,7 @@
 -- Description: Creates a Tax Invoice Detail line item
 -- =============================================
 ALTER PROCEDURE [dbo].[ERP_CreateTaxInvoiceDetail]
-    @InvoiceMasterCode INT,
+    @InvoiceMasterCode BIGINT,
     @ItemCode INT,
     @UomCode INT,
     @CustomerPoCode INT = NULL,
@@ -81,16 +81,30 @@ BEGIN
             @StoreCode, 0
         );
 
-        -- Manage Stock (Insert stock OUT entry in STOCK_LEDGER)
+        -- Update dispatched qty in CUSTPO_DETAIL when a PO line is referenced
+        IF @CustomerPoCode IS NOT NULL
+        BEGIN
+            UPDATE CUSTPO_DETAIL
+            SET CPOD_DISPACH = ISNULL(CPOD_DISPACH, 0) + @InvoiceQuantity
+            WHERE CPOD_CPOM_CODE = @CustomerPoCode
+              AND CPOD_I_CODE    = @ItemCode;
+        END
+
+        -- Manage Stock only for TAXINV (Labour invoices have no stock impact)
         DECLARE @InvoiceDate DATETIME;
-        SELECT @InvoiceDate = INM_DATE FROM INVOICE_MASTER WHERE INM_CODE = @InvoiceMasterCode;
-        
-        EXEC ERP_ManageTaxInvoiceStock 
-            @Operation = 'INSERT',
-            @InvoiceCode = @InvoiceMasterCode,
-            @InvoiceDate = @InvoiceDate,
-            @ItemCode = @ItemCode,
-            @Quantity = @InvoiceQuantity;
+        DECLARE @InvoiceType NVARCHAR(20);
+        SELECT @InvoiceDate = INM_DATE, @InvoiceType = INM_TYPE
+        FROM INVOICE_MASTER WHERE INM_CODE = @InvoiceMasterCode;
+
+        IF @InvoiceType = 'TAXINV'
+        BEGIN
+            EXEC ERP_ManageTaxInvoiceStock
+                @Operation = 'INSERT',
+                @InvoiceCode = @InvoiceMasterCode,
+                @InvoiceDate = @InvoiceDate,
+                @ItemCode = @ItemCode,
+                @Quantity = @InvoiceQuantity;
+        END
 
     END TRY
     BEGIN CATCH

@@ -20,7 +20,12 @@ public class IntegrationFixture : IAsyncLifetime
 {
     private static IConfiguration _configuration = default!;
     private static Respawner _respawner = default!;
-    private readonly MsSqlContainer _msSqlContainer;
+    private MsSqlContainer? _msSqlContainer;
+
+    // Set to false when neither the test DB nor Docker is available.
+    // IntegrationTestBase reads this to skip tests gracefully.
+    public static bool IsAvailable { get; private set; } = true;
+    public static string UnavailableReason { get; private set; } = string.Empty;
 
     public IntegrationFixture()
     {
@@ -30,13 +35,6 @@ public class IntegrationFixture : IAsyncLifetime
            .AddEnvironmentVariables();
 
         _configuration = builder.Build();
-        
-        // Always use Testcontainers for complete isolation (matches reference implementation)
-        // This ensures tests NEVER touch actual database
-        _msSqlContainer = new MsSqlBuilder()
-            .WithImage("mcr.microsoft.com/mssql/server:2022-latest")
-            .WithPassword("Strong!Passw0rd")
-            .Build();
     }
 
     public static ServiceProvider BuildServiceProvider()
@@ -64,34 +62,67 @@ public class IntegrationFixture : IAsyncLifetime
         // This allows tests to run against a real test database that has the schema
         var testDbConnectionString = _configuration.GetConnectionString("DefaultConnection");
         
-        if (!string.IsNullOrEmpty(testDbConnectionString) && 
-            (testDbConnectionString.Contains("_Test") || testDbConnectionString.Contains("Test")))
+        if (!string.IsNullOrEmpty(testDbConnectionString))
         {
-            // Use existing test database from appsettings.json
-            // This database should already have the schema and stored procedures
-            Console.WriteLine($"---- Using Test Database from appsettings.json");
-            Console.WriteLine($"---- Connection: {testDbConnectionString}");
-            
-            // Verify the database exists and has required stored procedures
-            if (await VerifyDatabaseHasSchemaAsync(testDbConnectionString))
+            Console.WriteLine($"---- Using Database from appsettings.json");
+
+            if (await VerifyDatabaseIsAccessibleAsync(testDbConnectionString))
             {
-                // Remove unsupported connection string keywords before storing in configuration
                 testDbConnectionString = RemoveUnsupportedConnectionStringKeywords(testDbConnectionString);
-                
-                // Use the test database from configuration
                 _configuration["ConnectionStrings:DefaultConnection"] = testDbConnectionString;
-                await SetDatabaseRestorePointAsync();
+
+                // Only run the full schema deployer against a dedicated _Test database.
+                // For the shared dev/backup database the schema already exists; running
+                // CreateTablesAsync would try to create indexes on tables that don't exist
+                // (AUDIT_TRAIL etc.) and would corrupt or fail against real data.
+                bool isDedicatedTestDb = testDbConnectionString.Contains("_Test", StringComparison.OrdinalIgnoreCase)
+                                      || testDbConnectionString.Contains("Test", StringComparison.OrdinalIgnoreCase);
+
+                if (isDedicatedTestDb)
+                {
+                    Console.WriteLine("---- Deploying schema to dedicated test database...");
+                    await DatabaseSchemaDeployer.CreateTablesAsync(testDbConnectionString);
+                    await DatabaseSchemaDeployer.DeployStoredProceduresAsync(testDbConnectionString);
+                    Console.WriteLine("---- Schema deployment completed.");
+                    await SetDatabaseRestorePointAsync();
+                }
+                else
+                {
+                    // Shared/dev database — schema is already deployed manually.
+                    // Only deploy stored procedures (DROP IF EXISTS / CREATE is idempotent).
+                    // Skip Respawner: it would delete real data from tables not in its ignore list.
+                    Console.WriteLine("---- Shared database detected — deploying stored procedures only (no Respawner)...");
+                    await DatabaseSchemaDeployer.DeployStoredProceduresAsync(testDbConnectionString);
+                    await DatabaseSchemaDeployer.SeedMasterTestDataAsync(testDbConnectionString);
+                    Console.WriteLine("---- Stored procedure deployment completed.");
+                }
+
                 return;
             }
             else
             {
-                Console.WriteLine($"---- Warning: Test database from appsettings.json doesn't have required schema. Creating container database instead.");
+                Console.WriteLine($"---- Warning: Database from appsettings.json is not accessible. Creating container database instead.");
             }
         }
         
         // Use Testcontainers (Docker SQL Server) for complete isolation
-        // Start Testcontainer (Docker SQL Server)
-        await _msSqlContainer.StartAsync();
+        // Build and start Testcontainer lazily (only when Docker is available)
+        try
+        {
+            _msSqlContainer = new MsSqlBuilder()
+                .WithImage("mcr.microsoft.com/mssql/server:2022-latest")
+                .WithPassword("Strong!Passw0rd")
+                .Build();
+            await _msSqlContainer.StartAsync();
+        }
+        catch (Exception ex)
+        {
+            IsAvailable = false;
+            UnavailableReason = $"Docker is not available and test database is unreachable. " +
+                $"Start Docker Desktop or ensure db_a2ea4b_sunv2_Test is accessible. ({ex.Message})";
+            Console.WriteLine($"---- SKIP: {UnavailableReason}");
+            return;
+        }
         
         // Get base connection string (connects to master database)
         var originalBaseConnectionString = _msSqlContainer.GetConnectionString();
@@ -140,24 +171,13 @@ public class IntegrationFixture : IAsyncLifetime
         await SetDatabaseRestorePointAsync();
     }
 
-    private static async Task<bool> VerifyDatabaseHasSchemaAsync(string connectionString)
+    private static async Task<bool> VerifyDatabaseIsAccessibleAsync(string connectionString)
     {
         try
         {
             using var connection = new SqlConnection(connectionString);
             await connection.OpenAsync();
-            
-            // Check if required stored procedure exists
-            var command = connection.CreateCommand();
-            command.CommandText = @"
-                SELECT COUNT(*) 
-                FROM sys.procedures 
-                WHERE name = 'ERP_GetActiveCompanies'";
-            
-            var result = await command.ExecuteScalarAsync();
-            var count = Convert.ToInt32(result);
-            
-            return count > 0;
+            return true;
         }
         catch
         {
@@ -206,11 +226,18 @@ public class IntegrationFixture : IAsyncLifetime
             [
                 "__EFMigrationsHistory",
                 "Logs",
-                // Test data tables - must persist between tests
+                // Core identity / auth tables - must persist between tests
                 "COMPANY_MASTER",
                 "USER_MASTER",
+                "USER_RIGHT",
                 "ROLES",
-                "UserRoles"
+                "UserRoles",
+                // Master data required by TaxInvoice tests
+                "ITEM_MASTER",
+                "ITEM_UNIT_MASTER",
+                "PARTY_MASTER",
+                "CUSTPO_MASTER",
+                "CUSTPO_DETAIL"
             ]
         });
     }
@@ -218,9 +245,8 @@ public class IntegrationFixture : IAsyncLifetime
 
     public async Task DisposeAsync()
     {
-        // Dispose Testcontainer (matches reference implementation)
-        // This automatically deletes the isolated database container
-        await _msSqlContainer.DisposeAsync().AsTask();
+        if (_msSqlContainer is not null)
+            await _msSqlContainer.DisposeAsync().AsTask();
     }
 
     public static async Task ResetDatabaseAsync()

@@ -1,7 +1,9 @@
+using ErpBE.API.Common;
 using ErpBE.Application.Common.Models;
 using ErpBE.Application.CustomerMaster.Commands;
 using ErpBE.Application.CustomerMaster.Queries;
 using ErpBE.Application.DTOs;
+using ErpBE.Domain.Common;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -26,6 +28,7 @@ namespace ErpBE.API.Controllers.Sales
         /// Get all customer masters with filtering, searching, and pagination
         /// </summary>
         [HttpGet]
+        [RequirePermission(ModuleCodes.Sales, PermissionBit.View)]
         public async Task<ActionResult<PagedResponse<CustomerMasterDto>>> GetAll([FromQuery] CustomerMasterQueryParameters parameters)
         {
             _logger.LogInformation("Getting customer masters with parameters: {@Parameters}", parameters);
@@ -40,6 +43,7 @@ namespace ErpBE.API.Controllers.Sales
         /// Get customer master by ID
         /// </summary>
         [HttpGet("{id}")]
+        [RequirePermission(ModuleCodes.Sales, PermissionBit.View)]
         public async Task<ActionResult<CustomerMasterDto>> GetById(int id, [FromQuery] int companyId)
         {
             _logger.LogInformation("Getting customer master with ID: {Id}, CompanyId: {CompanyId}", id, companyId);
@@ -60,6 +64,7 @@ namespace ErpBE.API.Controllers.Sales
         /// Create a new customer master
         /// </summary>
         [HttpPost]
+        [RequirePermission(ModuleCodes.Sales, PermissionBit.Add)]
         public async Task<ActionResult<CustomerMasterDto>> Create([FromBody] CreateCustomerMasterRequest request)
         {
             _logger.LogInformation("Creating new customer master: {@Request}", request);
@@ -110,6 +115,7 @@ namespace ErpBE.API.Controllers.Sales
         /// Update an existing customer master
         /// </summary>
         [HttpPut("{id}")]
+        [RequirePermission(ModuleCodes.Sales, PermissionBit.Edit)]
         public async Task<IActionResult> Update(int id, [FromBody] UpdateCustomerMasterRequest request)
         {
             if (id != request.Id)
@@ -168,6 +174,7 @@ namespace ErpBE.API.Controllers.Sales
         /// Delete a customer master
         /// </summary>
         [HttpDelete("{id}")]
+        [RequirePermission(ModuleCodes.Sales, PermissionBit.Delete)]
         public async Task<IActionResult> Delete(int id, [FromQuery] int companyId)
         {
             _logger.LogInformation("Deleting customer master with ID: {Id}, CompanyId: {CompanyId}", id, companyId);
@@ -183,6 +190,7 @@ namespace ErpBE.API.Controllers.Sales
         /// Check if party name is unique
         /// </summary>
         [HttpGet("check-partyname")]
+        [RequirePermission(ModuleCodes.Sales, PermissionBit.View)]
         public async Task<ActionResult<bool>> CheckPartyNameUnique([FromQuery] string partyName, [FromQuery] int? id, [FromQuery] int companyId)
         {
             var query = new CheckPartyNameUniqueQuery 
@@ -199,6 +207,7 @@ namespace ErpBE.API.Controllers.Sales
         /// Check if abbreviation is unique
         /// </summary>
         [HttpGet("check-abbreviation")]
+        [RequirePermission(ModuleCodes.Sales, PermissionBit.View)]
         public async Task<ActionResult<bool>> CheckAbbreviationUnique([FromQuery] string abbreviation, [FromQuery] int? id, [FromQuery] int companyId)
         {
             var query = new CheckAbbreviationUniqueQuery 

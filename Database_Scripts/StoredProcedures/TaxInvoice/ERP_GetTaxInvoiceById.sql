@@ -1,17 +1,17 @@
 -- =============================================
--- Author:      AI Assistant
--- Create date: 2025-01-24
 -- Description: Gets a Tax Invoice by ID with all line items
+--              Filters by PK only (no company code filter)
+--              Includes UomName and CustomerPoNumber for display
 -- =============================================
-CREATE PROCEDURE [dbo].[ERP_GetTaxInvoiceById]
-    @InvoiceCode INT,
-    @CompanyCode INT
+CREATE OR ALTER PROCEDURE [dbo].[ERP_GetTaxInvoiceById]
+    @InvoiceCode BIGINT,
+    @CompanyCode INT = 0  -- accepted for backward compat, not used for filtering
 AS
 BEGIN
     SET NOCOUNT ON;
 
     -- Return Invoice Master
-    SELECT 
+    SELECT
         INM_CODE AS InvoiceCode,
         INM_CM_CODE AS CompanyCode,
         INM_NO AS InvoiceNumber,
@@ -25,6 +25,7 @@ BEGIN
         INM_DF_DATE AS DateFrom,
         INM_DT_DATE AS DateTo,
         INM_SUPPLEMENTORY AS IsSupplementary,
+        INM_SUPPLEMENTORY AS IsSuppliment,
         INM_PROCESS AS Process,
         INM_NET_AMT AS NetAmount,
         INM_S_TAX AS ServiceTaxPercentage,
@@ -165,69 +166,73 @@ BEGIN
         INM_TERMSNCONDITIONS AS TermsAndConditions,
         INM_AUTHORIZEDNAME AS AuthorizedName,
         INM_ADDRESS_SELECTED AS AddressSelected,
+        INM_PARENT_CODE AS ParentInvoiceCode,
         I.ES_DELETE AS IsDeleted,
         I.MODIFY AS IsModifyLocked
     FROM INVOICE_MASTER I
     LEFT JOIN PARTY_MASTER P ON I.INM_P_CODE = P.P_CODE
     LEFT JOIN STATE_MASTER SM ON I.INM_STATE = SM.SM_CODE
-    WHERE I.INM_CODE = @InvoiceCode AND I.INM_CM_CODE = @CompanyCode;
+    WHERE I.INM_CODE = @InvoiceCode;
 
-    -- Return Invoice Details
-    SELECT 
-        IND_INM_CODE AS InvoiceMasterCode,
-        IND_I_CODE AS ItemCode,
+    -- Return Invoice Details (with UOM name and PO number for display)
+    SELECT
+        ID.IND_INM_CODE AS InvoiceMasterCode,
+        ID.IND_I_CODE AS ItemCode,
         IM.I_CODENO AS ItemCode_Display,
         IM.I_NAME AS ItemName,
-        IND_UOM_CODE AS UomCode,
-        IND_CPOM_CODE AS CustomerPoCode,
-        IND_INQTY AS InvoiceQuantity,
-        IND_RATE AS Rate,
-        IND_CON_QTY AS ConversionQuantity,
-        IND_AMORT_RATE AS AmortizationRate,
-        IND_NO_PACK AS NumberOfPackages,
-        IND_PACK_DESC AS PackageDescription,
-        IND_QTY_PACK AS QuantityPerPack,
-        IND_AMT AS Amount,
-        IND_DC_NO AS DeliveryChallanNumbers,
-        IND_DC_DATE AS DeliveryChallanDates,
-        IND_EX_NO AS ExciseNumbers,
-        IND_PROCESS_CODE AS ProcessCode,
-        IND_GIN_NO AS GinNumber,
-        IND_GIN_DATE AS GinDate,
-        IND_GIN_RCPT AS GinReceipt,
-        IND_MR_CODE AS MrCode,
-        IND_GIN_ACCP AS GinAcceptance,
-        IND_EX_AMT AS ExciseAmount,
-        IND_E_CESS_AMT AS EducationCessAmount,
-        IND_SH_CESS_AMT AS SecondaryHigherEducationCessAmount,
-        E_BASIC_CentralT AS CgstPercentage,
-        E_EDU_CESS_State AS SgstPercentage,
-        E_H_EDU_Integrated AS IgstPercentage,
-        IND_SR_NO AS SerialNumber,
-        IND_REMARK AS Remarks,
-        IND_IWM_CODE AS ItemWarehouseCode,
-        IND_ACT_WEIGHT AS ActualWeight,
-        IND_SIZE AS Size,
-        IND_SUBHEADING AS SubHeading,
-        IND_BACHNO AS BatchNumber,
-        IND_PAK_QTY AS PackingQuantity,
-        IND_GROSS_WEIGHT AS GrossWeight,
-        IND_NET_WEIGHT AS NetWeight,
-        IND_SIZE_OF_BOX AS SizeOfBox,
-        IND_NO_OF_BARRELS AS NumberOfBarrels,
-        IND_NO_OF_PACK_DESC AS NumberOfPackagesDescription,
-        IND_CONTAINER_NO AS ContainerNumber,
-        IND_REFUNDABLE_QTY AS RefundableQuantity,
-        IND_AMORTRATE AS AmortRate,
-        IND_AMORTAMT AS AmortAmount,
-        IND_HSN_CODE AS HsnCode,
-        IND_STORE_CODE AS StoreCode,
+        ID.IND_UOM_CODE AS UomCode,
+        IUM.I_UOM_NAME AS UomName,
+        ID.IND_CPOM_CODE AS CustomerPoCode,
+        CPO.CPOM_PONO AS CustomerPoNumber,
+        ID.IND_INQTY AS InvoiceQuantity,
+        ID.IND_RATE AS Rate,
+        ID.IND_CON_QTY AS ConversionQuantity,
+        ID.IND_AMORT_RATE AS AmortizationRate,
+        ID.IND_NO_PACK AS NumberOfPackages,
+        ID.IND_PACK_DESC AS PackageDescription,
+        ID.IND_QTY_PACK AS QuantityPerPack,
+        ID.IND_AMT AS Amount,
+        ID.IND_DC_NO AS DeliveryChallanNumbers,
+        ID.IND_DC_DATE AS DeliveryChallanDates,
+        ID.IND_EX_NO AS ExciseNumbers,
+        ID.IND_PROCESS_CODE AS ProcessCode,
+        ID.IND_GIN_NO AS GinNumber,
+        ID.IND_GIN_DATE AS GinDate,
+        ID.IND_GIN_RCPT AS GinReceipt,
+        ID.IND_MR_CODE AS MrCode,
+        ID.IND_GIN_ACCP AS GinAcceptance,
+        ID.IND_EX_AMT AS ExciseAmount,
+        ID.IND_E_CESS_AMT AS EducationCessAmount,
+        ID.IND_SH_CESS_AMT AS SecondaryHigherEducationCessAmount,
+        ID.E_BASIC_CentralT AS CgstPercentage,
+        ID.E_EDU_CESS_State AS SgstPercentage,
+        ID.E_H_EDU_Integrated AS IgstPercentage,
+        ID.IND_SR_NO AS SerialNumber,
+        ID.IND_REMARK AS Remarks,
+        ID.IND_IWM_CODE AS ItemWarehouseCode,
+        ID.IND_ACT_WEIGHT AS ActualWeight,
+        ID.IND_SIZE AS Size,
+        ID.IND_SUBHEADING AS SubHeading,
+        ID.IND_BACHNO AS BatchNumber,
+        ID.IND_PAK_QTY AS PackingQuantity,
+        ID.IND_GROSS_WEIGHT AS GrossWeight,
+        ID.IND_NET_WEIGHT AS NetWeight,
+        ID.IND_SIZE_OF_BOX AS SizeOfBox,
+        ID.IND_NO_OF_BARRELS AS NumberOfBarrels,
+        ID.IND_NO_OF_PACK_DESC AS NumberOfPackagesDescription,
+        ID.IND_CONTAINER_NO AS ContainerNumber,
+        ID.IND_REFUNDABLE_QTY AS RefundableQuantity,
+        ID.IND_AMORTRATE AS AmortRate,
+        ID.IND_AMORTAMT AS AmortAmount,
+        ID.IND_HSN_CODE AS HsnCode,
+        ID.IND_STORE_CODE AS StoreCode,
         ID.ES_DELETE AS IsDeleted
     FROM INVOICE_DETAIL ID
     LEFT JOIN ITEM_MASTER IM ON ID.IND_I_CODE = IM.I_CODE
+    LEFT JOIN ITEM_UNIT_MASTER IUM ON ID.IND_UOM_CODE = IUM.I_UOM_CODE
+    LEFT JOIN CUSTPO_MASTER CPO ON ID.IND_CPOM_CODE = CPO.CPOM_CODE
     WHERE ID.IND_INM_CODE = @InvoiceCode AND ID.ES_DELETE = 0
     ORDER BY ID.IND_I_CODE;
 
 END
 GO
-

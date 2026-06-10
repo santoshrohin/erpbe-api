@@ -1,16 +1,18 @@
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ErpBE.API.Common;
 using ErpBE.Application.DTOs;
 using ErpBE.Application.Common.Models;
 using ErpBE.Application.ItemCategoryMaster.Commands;
 using ErpBE.Application.ItemCategoryMaster.Queries;
+using ErpBE.Domain.Common;
 
 namespace ErpBE.API.Controllers.Master
 {
     [ApiController]
     [Route("api/[controller]")]
-    [AuthorizeAdmin] // Only Admin can manage item categories
+    [Authorize]
     public class ItemCategoryMasterController : ControllerBase
     {
         private readonly IMediator _mediator;
@@ -24,6 +26,7 @@ namespace ErpBE.API.Controllers.Master
         /// Creates a new item category.
         /// </summary>
         [HttpPost]
+        [RequirePermission(ModuleCodes.Masters, PermissionBit.Add)]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> CreateItemCategory([FromBody] CreateItemCategoryMasterRequest request)
@@ -37,6 +40,7 @@ namespace ErpBE.API.Controllers.Master
         /// Updates an existing item category.
         /// </summary>
         [HttpPut]
+        [RequirePermission(ModuleCodes.Masters, PermissionBit.Edit)]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> UpdateItemCategory([FromBody] UpdateItemCategoryMasterRequest request)
@@ -50,6 +54,7 @@ namespace ErpBE.API.Controllers.Master
         /// Deletes an item category by ID (soft delete).
         /// </summary>
         [HttpDelete("{id}")]
+        [RequirePermission(ModuleCodes.Masters, PermissionBit.Delete)]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> DeleteItemCategory(int id)
@@ -63,6 +68,7 @@ namespace ErpBE.API.Controllers.Master
         /// Gets an item category by ID.
         /// </summary>
         [HttpGet("{id}")]
+        [RequirePermission(ModuleCodes.Masters, PermissionBit.View)]
         [ProducesResponseType(typeof(ItemCategoryMasterDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetItemCategoryById(int id)
@@ -76,6 +82,7 @@ namespace ErpBE.API.Controllers.Master
         /// Gets a paginated list of item categories with server-side filtering, searching, and sorting.
         /// </summary>
         [HttpGet]
+        [RequirePermission(ModuleCodes.Masters, PermissionBit.View)]
         [ProducesResponseType(typeof(PagedResponse<ItemCategoryMasterDto>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetItemCategories([FromQuery] ItemCategoryMasterQueryParameters queryParameters)
         {
@@ -88,6 +95,7 @@ namespace ErpBE.API.Controllers.Master
         /// Gets an item category by name and company ID.
         /// </summary>
         [HttpGet("name/{categoryName}")]
+        [RequirePermission(ModuleCodes.Masters, PermissionBit.View)]
         [ProducesResponseType(typeof(ItemCategoryMasterDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetItemCategoryByName(string categoryName, [FromQuery] int companyId)
@@ -105,6 +113,7 @@ namespace ErpBE.API.Controllers.Master
         /// Checks if an item category name is unique within a company.
         /// </summary>
         [HttpGet("check-unique")]
+        [RequirePermission(ModuleCodes.Masters, PermissionBit.View)]
         [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
         public async Task<IActionResult> CheckCategoryNameUnique(
             [FromQuery] string categoryName, 

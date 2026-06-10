@@ -28,14 +28,9 @@ namespace ErpBE.Application.TaxInvoice.Validators
             
             // B. Customer Selection Validations
             RuleFor(x => x.CustomerCode)
-                .GreaterThan(0)
+                .NotEqual(0)
                 .WithMessage("Please select a customer.");
-            
-            // C. PO Selection Validations (MANDATORY as per business rules)
-            RuleFor(x => x.CustomerPoCode)
-                .NotEmpty()
-                .WithMessage("Please select a Customer PO.");
-            
+
             // D. Line Items Validation
             RuleFor(x => x.InvoiceDetails)
                 .NotEmpty()

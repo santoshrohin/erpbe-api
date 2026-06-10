@@ -1,16 +1,18 @@
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ErpBE.API.Common;
 using ErpBE.Application.DTOs;
 using ErpBE.Application.Common.Models;
 using ErpBE.Application.UnitMaster.Commands;
 using ErpBE.Application.UnitMaster.Queries;
+using ErpBE.Domain.Common;
 
 namespace ErpBE.API.Controllers.Master
 {
     [ApiController]
     [Route("api/[controller]")]
-    [AuthorizeAdmin] // Only Admin can manage unit masters
+    [Authorize]
     public class UnitMasterController : ControllerBase
     {
         private readonly IMediator _mediator;
@@ -26,6 +28,7 @@ namespace ErpBE.API.Controllers.Master
         /// <param name="request">Unit master creation details.</param>
         /// <returns>The ID of the newly created unit master.</returns>
         [HttpPost]
+        [RequirePermission(ModuleCodes.Masters, PermissionBit.Add)]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> CreateUnitMaster([FromBody] CreateUnitMasterRequest request)
@@ -42,6 +45,7 @@ namespace ErpBE.API.Controllers.Master
         /// <param name="request">Unit master update details.</param>
         /// <returns>No content if successful.</returns>
         [HttpPut]
+        [RequirePermission(ModuleCodes.Masters, PermissionBit.Edit)]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> UpdateUnitMaster([FromBody] UpdateUnitMasterRequest request)
@@ -58,6 +62,7 @@ namespace ErpBE.API.Controllers.Master
         /// <param name="id">The ID of the unit master to delete.</param>
         /// <returns>No content if successful.</returns>
         [HttpDelete("{id}")]
+        [RequirePermission(ModuleCodes.Masters, PermissionBit.Delete)]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> DeleteUnitMaster(int id)
@@ -74,6 +79,7 @@ namespace ErpBE.API.Controllers.Master
         /// <param name="id">The ID of the unit master.</param>
         /// <returns>The unit master details.</returns>
         [HttpGet("{id}")]
+        [RequirePermission(ModuleCodes.Masters, PermissionBit.View)]
         [ProducesResponseType(typeof(UnitMasterDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> GetUnitMasterById(int id)
@@ -91,6 +97,7 @@ namespace ErpBE.API.Controllers.Master
         /// <param name="companyId">The company ID.</param>
         /// <returns>The unit master details.</returns>
         [HttpGet("name/{unitName}")]
+        [RequirePermission(ModuleCodes.Masters, PermissionBit.View)]
         [ProducesResponseType(typeof(UnitMasterDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetUnitMasterByName(string unitName, [FromQuery] int companyId)
@@ -108,6 +115,7 @@ namespace ErpBE.API.Controllers.Master
         /// <param name="excludeId">Optional ID to exclude from uniqueness check (for updates).</param>
         /// <returns>Indication of whether the name is unique.</returns>
         [HttpGet("check-unique")]
+        [RequirePermission(ModuleCodes.Masters, PermissionBit.View)]
         [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
         public async Task<IActionResult> CheckUnitNameUnique([FromQuery] string unitName, [FromQuery] int companyId, [FromQuery] int? excludeId = null)
         {
@@ -127,6 +135,7 @@ namespace ErpBE.API.Controllers.Master
         /// <param name="queryParameters">Query parameters for pagination and filtering.</param>
         /// <returns>A paginated list of unit masters.</returns>
         [HttpGet]
+        [RequirePermission(ModuleCodes.Masters, PermissionBit.View)]
         [ProducesResponseType(typeof(PagedResponse<UnitMasterDto>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetUnitMasters([FromQuery] UnitMasterQueryParameters queryParameters)
         {
@@ -142,6 +151,7 @@ namespace ErpBE.API.Controllers.Master
         /// <param name="isActive">The new active status.</param>
         /// <returns>No content if successful.</returns>
         [HttpPatch("{id}/status")]
+        [RequirePermission(ModuleCodes.Masters, PermissionBit.Edit)]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> SetUnitMasterActiveStatus(int id, [FromQuery] bool isActive)

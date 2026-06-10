@@ -8,7 +8,7 @@ namespace ErpBE.Application.DTOs
     {
         #region Primary Keys & References (4 fields)
         
-        public int? InvoiceMasterCode { get; set; } // IND_INM_CODE
+        public long? InvoiceMasterCode { get; set; } // IND_INM_CODE
         public int? ItemCode { get; set; } // IND_I_CODE
         public int? UomCode { get; set; } // IND_UOM_CODE
         public int? CustomerPoCode { get; set; } // IND_CPOM_CODE

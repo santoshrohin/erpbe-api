@@ -1,56 +1,62 @@
 using ErpBE.Application.DTOs;
 using ErpBE.Application.TaxInvoice.Commands;
 using ErpBE.Application.Interfaces;
+using ErpBE.Domain.Auth;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
 namespace ErpBE.Application.TaxInvoice.Handlers
 {
-    /// <summary>
-    /// Handler for creating Tax Invoice - Implements ALL business logic from legacy TaxInvoice.aspx.cs
-    /// </summary>
     public class CreateTaxInvoiceCommandHandler : IRequestHandler<CreateTaxInvoiceCommand, TaxInvoiceMasterDto>
     {
-        private readonly ITaxInvoiceRepository _repository;
+        private readonly ITaxInvoiceRepository                 _repository;
+        private readonly IActivityLogService                   _activityLog;
+        private readonly ICompanyContext                       _ctx;
         private readonly ILogger<CreateTaxInvoiceCommandHandler> _logger;
 
         public CreateTaxInvoiceCommandHandler(
-            ITaxInvoiceRepository repository,
+            ITaxInvoiceRepository                 repository,
+            IActivityLogService                   activityLog,
+            ICompanyContext                       ctx,
             ILogger<CreateTaxInvoiceCommandHandler> logger)
         {
-            _repository = repository;
-            _logger = logger;
+            _repository  = repository;
+            _activityLog = activityLog;
+            _ctx         = ctx;
+            _logger      = logger;
         }
 
         public async Task<TaxInvoiceMasterDto> Handle(CreateTaxInvoiceCommand request, CancellationToken cancellationToken)
         {
-            _logger.LogInformation("Creating Tax Invoice for Company: {CompanyCode}, Customer: {CustomerCode}", 
+            _logger.LogInformation("Creating Tax Invoice for Company: {CompanyCode}, Customer: {CustomerCode}",
                 request.CompanyCode, request.CustomerCode);
 
             try
             {
-                // 1. Generate Invoice Number
                 var invoiceNumber = await _repository.GenerateInvoiceNumberAsync(request.CompanyCode);
-                _logger.LogInformation("Generated Invoice Number: {InvoiceNumber}", invoiceNumber);
-
-                // 2. Map Command to DTO
                 var invoiceDto = MapCommandToDto(request, invoiceNumber);
-
-                // 3. Calculate all amounts (NET, TAXABLE, GST, GROSS)
                 CalculateAllAmounts(invoiceDto);
-
-                // 4. Create invoice in database (SP will handle stock updates)
                 var createdInvoice = await _repository.CreateTaxInvoiceAsync(invoiceDto);
 
-                _logger.LogInformation("Tax Invoice created successfully. Invoice Code: {InvoiceCode}, Invoice Number: {InvoiceNumber}", 
+                _logger.LogInformation("Tax Invoice created. Code: {InvoiceCode}, Number: {InvoiceNumber}",
                     createdInvoice.InvoiceCode, createdInvoice.InvoiceNumber);
+
+                await _activityLog.WriteLogAsync(
+                    companyId: request.CompanyCode,
+                    source:    "TaxInvoice",
+                    @event:    "INSERT",
+                    docName:   "Tax Invoice",
+                    docNo:     createdInvoice.InvoiceNumber?.ToString() ?? string.Empty,
+                    docCode:   createdInvoice.InvoiceCode,
+                    userName:  _ctx.Username,
+                    userCode:  _ctx.UserCode,
+                    cancellationToken: cancellationToken);
 
                 return createdInvoice;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error creating Tax Invoice for Company: {CompanyCode}, Customer: {CustomerCode}", 
-                    request.CompanyCode, request.CustomerCode);
+                _logger.LogError(ex, "Error creating Tax Invoice for Company: {CompanyCode}", request.CompanyCode);
                 throw;
             }
         }
@@ -71,6 +77,7 @@ namespace ErpBE.Application.TaxInvoice.Handlers
                 DateFrom = command.DateFrom,
                 DateTo = command.DateTo,
                 IsSupplementary = command.IsSupplementary,
+                ParentInvoiceCode = command.ParentInvoiceCode,
                 Process = command.Process,
 
                 // Amount Fields

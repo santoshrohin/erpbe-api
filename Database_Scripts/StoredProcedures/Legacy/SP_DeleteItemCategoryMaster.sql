@@ -1,0 +1,12 @@
+﻿CREATE OR ALTER PROCEDURE [dbo].[SP_DeleteItemCategoryMaster]
+    @I_CAT_CODE INT
+AS
+BEGIN
+    SET NOCOUNT OFF;
+    
+    UPDATE ITEM_CATEGORY_MASTER
+    SET ES_DELETE = 1
+    WHERE I_CAT_CODE = @I_CAT_CODE;
+    
+    SELECT @@ROWCOUNT AS AffectedRows;
+END

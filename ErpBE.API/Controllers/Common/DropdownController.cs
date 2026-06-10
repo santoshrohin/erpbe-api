@@ -1,13 +1,15 @@
 using ErpBE.Application.Common;
 using ErpBE.Application.Common.Models;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ErpBE.API.Controllers.Common
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class DropdownController : ControllerBase
+    [Authorize]
+    public sealed class DropdownController : ControllerBase
     {
         private readonly IMediator _mediator;
 

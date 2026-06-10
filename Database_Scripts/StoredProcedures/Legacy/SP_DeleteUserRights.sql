@@ -1,0 +1,12 @@
+﻿CREATE OR ALTER PROCEDURE [dbo].[SP_DeleteUserRights]
+@UR_UM_CODE int
+
+AS
+BEGIN
+	
+	UPDATE    USER_RIGHT
+	SET       UR_IS_DELETE = 1
+	WHERE	  UR_UM_CODE = @UR_UM_CODE
+
+
+END

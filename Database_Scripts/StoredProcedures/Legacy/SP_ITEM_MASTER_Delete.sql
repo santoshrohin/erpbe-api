@@ -1,0 +1,12 @@
+﻿CREATE OR ALTER PROCEDURE SP_ITEM_MASTER_Delete
+
+@I_CODE int
+
+AS
+
+Update 
+ITEM_MASTER
+
+set ES_DELETE = 1
+
+where I_CODE=@I_CODE
