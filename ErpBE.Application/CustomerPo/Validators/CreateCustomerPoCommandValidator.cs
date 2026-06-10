@@ -31,8 +31,9 @@ public class CreateCustomerPoCommandValidator : AbstractValidator<CreateCustomer
 
         // Legacy rule: PO Date must not be earlier than Customer PO Date.
         // CustomerPO.aspx.cs line 230: if (PoDate < CustPoDate) → "PO Date Should Not Greater than Entry Date"
+        // Compare by date only (legacy uses date pickers with no time component)
         RuleFor(x => x)
-            .Must(x => !x.CustomerPoDate.HasValue || x.PoDate >= x.CustomerPoDate.Value)
+            .Must(x => !x.CustomerPoDate.HasValue || x.PoDate.Date >= x.CustomerPoDate.Value.Date)
             .WithMessage("PO Date must not be earlier than Customer PO Date.")
             .When(x => x.CustomerPoDate.HasValue && x.PoDate != default);
 
@@ -71,7 +72,7 @@ public class CreateCustomerPoCommandValidator : AbstractValidator<CreateCustomer
             .When(x => x.GrandTotal.HasValue);
 
         RuleFor(x => x.ProjectCode)
-            .GreaterThan(0)
+            .NotEqual(0)
             .WithMessage("ProjectCode must be a valid project ID (null means no project; 0 is not a valid project ID).")
             .When(x => x.ProjectCode.HasValue);
 

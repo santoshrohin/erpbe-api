@@ -11,6 +11,9 @@ BEGIN
            MODIFY_BY   = NULL
     WHERE  INM_CODE    = @InvoiceCode
       AND  INM_CM_CODE = @CompanyCode
-      AND  INM_TYPE    = 'OutJWINM';
+      AND  INM_TYPE    = 'OutJWINM'
+      AND  MODIFY      = 1;
+
+    SELECT @@ROWCOUNT AS RowsAffected;
 END
 GO

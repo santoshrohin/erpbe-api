@@ -90,13 +90,13 @@ BEGIN
               AND CPOD_I_CODE    = @ItemCode;
         END
 
-        -- Manage Stock only for TAXINV (Labour invoices have no stock impact)
+        -- Manage Stock for TAXINV (Tax Invoice) and OutJWINM (Labour Charge Invoice)
         DECLARE @InvoiceDate DATETIME;
         DECLARE @InvoiceType NVARCHAR(20);
         SELECT @InvoiceDate = INM_DATE, @InvoiceType = INM_TYPE
         FROM INVOICE_MASTER WHERE INM_CODE = @InvoiceMasterCode;
 
-        IF @InvoiceType = 'TAXINV'
+        IF @InvoiceType IN ('TAXINV', 'OutJWINM')
         BEGIN
             EXEC ERP_ManageTaxInvoiceStock
                 @Operation = 'INSERT',

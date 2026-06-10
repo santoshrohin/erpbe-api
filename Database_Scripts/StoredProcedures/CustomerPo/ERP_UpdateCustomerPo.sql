@@ -89,9 +89,11 @@ BEGIN
             CPOM_INQ_CODE = @InquiryCode,
             CPOM_IS_VERBAL = @IsVerbalOrder,
             CPOM_PROJECT_CODE = @ProjectCode,
-            CPOM_PROJECT_NAME = @ProjectName
-        WHERE 
-            CPOM_CODE = @PoCode 
+            CPOM_PROJECT_NAME = @ProjectName,
+            CPOM_AM_COUNT     = ISNULL(CPOM_AM_COUNT, 0) + 1,
+            CPOM_AM_DATE      = GETDATE()
+        WHERE
+            CPOM_CODE = @PoCode
             AND CPOM_CM_COMP_ID = @CompanyId
             AND ES_DELETE = 0;
 
