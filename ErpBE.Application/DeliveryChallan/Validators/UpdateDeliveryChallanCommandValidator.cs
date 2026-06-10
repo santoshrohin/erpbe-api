@@ -9,13 +9,13 @@ public class UpdateDeliveryChallanCommandValidator : AbstractValidator<UpdateDel
     {
         RuleFor(x => x.ChallanCode).NotEqual(0).WithMessage("Challan code is required.");
         RuleFor(x => x.CompanyCode).GreaterThan(0).WithMessage("Company code is required.");
-        RuleFor(x => x.CustomerCode).NotNull().GreaterThan(0).WithMessage("Customer is required.");
+        RuleFor(x => x.CustomerCode).NotNull().NotEqual(0).WithMessage("Customer is required.");
         RuleFor(x => x.ChallanDate).NotNull().WithMessage("Challan date is required.");
         RuleFor(x => x.Details).NotEmpty().WithMessage("At least one detail line is required.");
 
         RuleForEach(x => x.Details).ChildRules(d =>
         {
-            d.RuleFor(x => x.ItemCode).NotNull().GreaterThan(0).WithMessage("Item code is required.");
+            d.RuleFor(x => x.ItemCode).NotNull().NotEqual(0).WithMessage("Item code is required.");
             d.RuleFor(x => x.OrderedQuantity).GreaterThan(0).WithMessage("Quantity must be greater than zero.");
         });
 

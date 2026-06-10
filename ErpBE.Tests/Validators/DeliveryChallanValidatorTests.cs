@@ -250,6 +250,48 @@ public class DeliveryChallanValidatorTests
         result.IsValid.Should().BeTrue();
     }
 
+    [Fact]
+    public void Create_NegativeCustomerCode_PassesValidation()
+    {
+        // Real DB uses negative surrogate keys (IDENTITY starts at INT_MIN)
+        var validator = new CreateDeliveryChallanCommandValidator();
+        var cmd = new CreateDeliveryChallanCommand
+        {
+            CompanyCode  = 1,
+            CustomerCode = int.MinValue,
+            ChallanDate  = DateTime.Today,
+            Details      = new List<CreateDeliveryChallanDetailCommand>
+            {
+                new() { ItemCode = int.MinValue, OrderedQuantity = 5 }
+            }
+        };
+
+        var result = validator.Validate(cmd);
+
+        result.IsValid.Should().BeTrue("negative codes are valid — DB IDENTITY starts at INT_MIN");
+    }
+
+    [Fact]
+    public void Update_NegativeCustomerAndItemCodes_PassesValidation()
+    {
+        var validator = new UpdateDeliveryChallanCommandValidator();
+        var cmd = new UpdateDeliveryChallanCommand
+        {
+            ChallanCode  = int.MinValue,
+            CompanyCode  = 1,
+            CustomerCode = int.MinValue,
+            ChallanDate  = DateTime.Today,
+            Details      = new List<UpdateDeliveryChallanDetailCommand>
+            {
+                new() { ItemCode = int.MinValue, OrderedQuantity = 5 }
+            }
+        };
+
+        var result = validator.Validate(cmd);
+
+        result.IsValid.Should().BeTrue("negative codes are valid — DB IDENTITY starts at INT_MIN");
+    }
+
     // ─── Delete ──────────────────────────────────────────────────────────────
 
     [Fact]
