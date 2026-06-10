@@ -1,6 +1,7 @@
 using ErpBE.Application.DTOs;
 using ErpBE.Application.TaxInvoice.Commands;
 using ErpBE.Application.Interfaces;
+using ErpBE.Domain.Auth;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
@@ -8,65 +9,55 @@ namespace ErpBE.Application.TaxInvoice.Handlers
 {
     public class UpdateTaxInvoiceCommandHandler : IRequestHandler<UpdateTaxInvoiceCommand, TaxInvoiceMasterDto>
     {
-        private readonly ITaxInvoiceRepository _repository;
+        private readonly ITaxInvoiceRepository                 _repository;
+        private readonly IActivityLogService                   _activityLog;
+        private readonly ICompanyContext                       _ctx;
         private readonly ILogger<UpdateTaxInvoiceCommandHandler> _logger;
-        private readonly CreateTaxInvoiceCommandHandler _createHandler;
 
         public UpdateTaxInvoiceCommandHandler(
-            ITaxInvoiceRepository repository,
+            ITaxInvoiceRepository                 repository,
+            IActivityLogService                   activityLog,
+            ICompanyContext                       ctx,
             ILogger<UpdateTaxInvoiceCommandHandler> logger)
         {
-            _repository = repository;
-            _logger = logger;
-            _createHandler = new CreateTaxInvoiceCommandHandler(repository, 
-                Microsoft.Extensions.Logging.LoggerFactory.Create(builder => builder.AddConsole())
-                .CreateLogger<CreateTaxInvoiceCommandHandler>());
+            _repository  = repository;
+            _activityLog = activityLog;
+            _ctx         = ctx;
+            _logger      = logger;
         }
 
         public async Task<TaxInvoiceMasterDto> Handle(UpdateTaxInvoiceCommand request, CancellationToken cancellationToken)
         {
-            _logger.LogInformation("Updating Tax Invoice: {InvoiceCode} for Company: {CompanyCode}", 
+            _logger.LogInformation("Updating Tax Invoice: {InvoiceCode} for Company: {CompanyCode}",
                 request.InvoiceCode, request.CompanyCode);
 
             try
             {
-                // 1. Check if invoice exists
                 var existingInvoice = await _repository.GetTaxInvoiceByIdAsync(request.InvoiceCode, request.CompanyCode);
                 if (existingInvoice == null)
-                {
                     throw new KeyNotFoundException($"Tax Invoice with code {request.InvoiceCode} not found.");
-                }
 
-                // 2. Check if invoice is locked
-                var isLocked = await _repository.IsInvoiceLockedAsync(request.InvoiceCode);
-                if (isLocked)
-                {
-                    throw new InvalidOperationException("This invoice is currently being modified by another user. Please try again later.");
-                }
+                // Lock is managed by the edit page (frontend acquires on mount, releases on save/cancel).
+                // Do not re-check or re-acquire here — it would conflict with the frontend-held lock.
 
-                // 3. Lock the invoice
-                await _repository.LockInvoiceAsync(request.InvoiceCode);
+                var invoiceDto = MapUpdateCommandToDto(request, existingInvoice.InvoiceNumber ?? 0);
+                CalculateAllAmounts(invoiceDto);
+                var updatedInvoice = await _repository.UpdateTaxInvoiceAsync(invoiceDto);
 
-                try
-                {
-                    // 4. Map Update Command to DTO (keep existing invoice number)
-                    var invoiceDto = MapUpdateCommandToDto(request, existingInvoice.InvoiceNumber ?? 0);
+                _logger.LogInformation("Tax Invoice updated. Code: {InvoiceCode}", updatedInvoice.InvoiceCode);
 
-                    // 5. Recalculate all amounts
-                    CalculateAllAmounts(invoiceDto);
+                await _activityLog.WriteLogAsync(
+                    companyId: request.CompanyCode,
+                    source:    "TaxInvoice",
+                    @event:    "UPDATE",
+                    docName:   "Tax Invoice",
+                    docNo:     updatedInvoice.InvoiceNumber?.ToString() ?? string.Empty,
+                    docCode:   request.InvoiceCode,
+                    userName:  _ctx.Username,
+                    userCode:  _ctx.UserCode,
+                    cancellationToken: cancellationToken);
 
-                    // 6. Update invoice in database
-                    var updatedInvoice = await _repository.UpdateTaxInvoiceAsync(invoiceDto);
-
-                    _logger.LogInformation("Tax Invoice updated successfully. Invoice Code: {InvoiceCode}", updatedInvoice.InvoiceCode);
-
-                    return updatedInvoice;
-                }
-                finally
-                {
-                    // 7. Always unlock the invoice
-                    await _repository.UnlockInvoiceAsync(request.InvoiceCode);
-                }
+                return updatedInvoice;
             }
             catch (Exception ex)
             {

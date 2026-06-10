@@ -184,12 +184,13 @@ namespace ErpBE.Infrastructure.Repositories
                 masterParams.Add("@TermsAndConditions", invoice.TermsAndConditions);
                 masterParams.Add("@AuthorizedName", invoice.AuthorizedName);
                 masterParams.Add("@AddressSelected", invoice.AddressSelected);
-                masterParams.Add("@NewInvoiceCode", dbType: DbType.Int32, direction: ParameterDirection.Output);
+                masterParams.Add("@ParentInvoiceCode", invoice.ParentInvoiceCode);
+                masterParams.Add("@NewInvoiceCode", dbType: DbType.Int64, direction: ParameterDirection.Output);
 
-                await connection.ExecuteAsync("ERP_CreateTaxInvoice", masterParams, 
+                await connection.ExecuteAsync("ERP_CreateTaxInvoice", masterParams,
                     transaction: transaction, commandType: CommandType.StoredProcedure);
 
-                var newInvoiceCode = masterParams.Get<int>("@NewInvoiceCode");
+                var newInvoiceCode = masterParams.Get<long>("@NewInvoiceCode");
                 invoice.InvoiceCode = newInvoiceCode;
 
                 // 2. Insert Invoice Details
@@ -250,12 +251,11 @@ namespace ErpBE.Infrastructure.Repositories
                 transaction.Commit();
                 _logger.LogInformation("Tax Invoice created successfully. Invoice Code: {InvoiceCode}", newInvoiceCode);
 
-                // Return the created invoice
                 return await GetTaxInvoiceByIdAsync(newInvoiceCode, invoice.CompanyCode ?? 0);
             }
             catch (Exception ex)
             {
-                transaction.Rollback();
+                try { transaction.Rollback(); } catch { /* transaction already completed by SQL Server */ }
                 _logger.LogError(ex, "Error creating Tax Invoice");
                 throw;
             }
@@ -487,13 +487,13 @@ namespace ErpBE.Infrastructure.Repositories
             }
             catch (Exception ex)
             {
-                transaction.Rollback();
+                try { transaction.Rollback(); } catch { /* transaction already completed by SQL Server */ }
                 _logger.LogError(ex, "Error updating Tax Invoice: {InvoiceCode}", invoice.InvoiceCode);
                 throw;
             }
         }
 
-        public async Task<bool> DeleteTaxInvoiceAsync(int invoiceCode, int companyCode)
+        public async Task<bool> DeleteTaxInvoiceAsync(long invoiceCode, int companyCode)
         {
             using var connection = new SqlConnection(_connectionString);
             
@@ -507,21 +507,22 @@ namespace ErpBE.Infrastructure.Repositories
             return result > 0;
         }
 
-        public async Task<TaxInvoiceMasterDto?> GetTaxInvoiceByIdAsync(int invoiceCode, int companyCode)
+        public async Task<TaxInvoiceMasterDto?> GetTaxInvoiceByIdAsync(long invoiceCode, int companyCode)
         {
             using var connection = new SqlConnection(_connectionString);
-            
+
             var parameters = new DynamicParameters();
             parameters.Add("@InvoiceCode", invoiceCode);
             parameters.Add("@CompanyCode", companyCode);
 
-            using var multi = await connection.QueryMultipleAsync("ERP_GetTaxInvoiceById", parameters, 
-                commandType: CommandType.StoredProcedure);
+            using var multi = await connection.QueryMultipleAsync(
+                "ERP_GetTaxInvoiceById", parameters, commandType: CommandType.StoredProcedure);
 
             var invoice = await multi.ReadFirstOrDefaultAsync<TaxInvoiceMasterDto>();
             if (invoice != null)
             {
-                invoice.InvoiceDetails = (await multi.ReadAsync<TaxInvoiceDetailDto>()).ToList();
+                var details = await multi.ReadAsync<TaxInvoiceDetailDto>();
+                invoice.InvoiceDetails = details.ToList();
             }
 
             return invoice;
@@ -563,42 +564,35 @@ namespace ErpBE.Infrastructure.Repositories
             };
         }
 
-        public async Task<bool> IsInvoiceLockedAsync(int invoiceCode)
+        public async Task<bool> IsInvoiceLockedAsync(long invoiceCode)
         {
             using var connection = new SqlConnection(_connectionString);
-            
             var parameters = new DynamicParameters();
             parameters.Add("@InvoiceCode", invoiceCode);
             parameters.Add("@IsLocked", dbType: DbType.Boolean, direction: ParameterDirection.Output);
-
-            await connection.ExecuteAsync("ERP_CheckInvoiceLock", parameters, 
+            await connection.ExecuteAsync("ERP_CheckInvoiceLock", parameters,
                 commandType: CommandType.StoredProcedure);
-
             return parameters.Get<bool>("@IsLocked");
         }
 
-        public async Task<bool> LockInvoiceAsync(int invoiceCode)
+        public async Task<bool> LockInvoiceAsync(long invoiceCode, int lockedByUserId)
         {
             using var connection = new SqlConnection(_connectionString);
-            
-            var result = await connection.ExecuteAsync(
+            var rowsAffected = await connection.ExecuteScalarAsync<int>(
                 "ERP_LockInvoice",
-                new { InvoiceCode = invoiceCode },
+                new { InvoiceCode = invoiceCode, LockedByUserId = lockedByUserId },
                 commandType: CommandType.StoredProcedure);
-
-            return result > 0;
+            return rowsAffected > 0;
         }
 
-        public async Task<bool> UnlockInvoiceAsync(int invoiceCode)
+        public async Task<bool> UnlockInvoiceAsync(long invoiceCode)
         {
             using var connection = new SqlConnection(_connectionString);
-            
-            var result = await connection.ExecuteAsync(
+            var rowsAffected = await connection.ExecuteScalarAsync<int>(
                 "ERP_UnlockInvoice",
                 new { InvoiceCode = invoiceCode },
                 commandType: CommandType.StoredProcedure);
-
-            return result > 0;
+            return rowsAffected > 0;
         }
 
         public async Task<List<TaxInvoiceDetailDto>> GetAvailableItemsFromPoAsync(int customerPoCode, int companyCode)
@@ -645,7 +639,7 @@ namespace ErpBE.Infrastructure.Repositories
             return parameters.Get<int>("@NewInvoiceNumber");
         }
 
-        public async Task<TaxInvoicePrintDto?> GetPrintDataAsync(int invoiceCode, int companyId)
+        public async Task<TaxInvoicePrintDto?> GetPrintDataAsync(long invoiceCode, int companyId)
         {
             using var connection = new SqlConnection(_connectionString);
             
@@ -701,7 +695,7 @@ namespace ErpBE.Infrastructure.Repositories
                 Company = company,
                 InvoiceHeader = invoiceHeader,
                 Recipient = recipient,
-                Delivery = delivery ?? new DeliveryPrintInfo  // Fallback to empty if null, copy from recipient later
+                Delivery = delivery ?? new DeliveryPrintInfo
                 {
                     Name = recipient.Name,
                     Address = recipient.Address,
@@ -714,6 +708,74 @@ namespace ErpBE.Infrastructure.Repositories
                 EInvoice = eInvoice,
                 TermsAndConditions = terms
             };
+        }
+
+        public async Task<bool> ApproveAsync(long invoiceCode, int companyCode)
+        {
+            using var connection = new SqlConnection(_connectionString);
+            var rowsAffected = await connection.ExecuteScalarAsync<int>(
+                "ERP_ApproveTaxInvoice",
+                new { InvoiceCode = invoiceCode, CompanyCode = companyCode },
+                commandType: CommandType.StoredProcedure);
+            return rowsAffected > 0;
+        }
+
+        public async Task<List<TaxInvoiceCustomerDto>> GetCustomersWithActivePosAsync(int companyCode)
+        {
+            using var connection = new SqlConnection(_connectionString);
+            var result = await connection.QueryAsync<TaxInvoiceCustomerDto>(
+                "ERP_GetTaxInvoiceCustomers",
+                new { CompanyCode = companyCode },
+                commandType: CommandType.StoredProcedure);
+            return result.ToList();
+        }
+
+        public async Task<List<TaxInvoiceItemDto>> GetItemsByCustomerAsync(int customerCode, int companyCode)
+        {
+            using var connection = new SqlConnection(_connectionString);
+            var result = await connection.QueryAsync<TaxInvoiceItemDto>(
+                "ERP_GetTaxInvoiceItemsByCustomer",
+                new { CustomerCode = customerCode, CompanyCode = companyCode },
+                commandType: CommandType.StoredProcedure);
+            return result.ToList();
+        }
+
+        public async Task<TaxInvoiceItemDetailsDto?> GetItemDetailsAsync(int itemCode, int companyCode)
+        {
+            using var connection = new SqlConnection(_connectionString);
+            return await connection.QueryFirstOrDefaultAsync<TaxInvoiceItemDetailsDto>(
+                "ERP_GetTaxInvoiceItemDetails",
+                new { ItemCode = itemCode, CompanyCode = companyCode },
+                commandType: CommandType.StoredProcedure);
+        }
+
+        public async Task<List<TaxInvoicePoDto>> GetPOsByItemCustomerAsync(int itemCode, int customerCode, int companyCode, int? invoiceCode)
+        {
+            using var connection = new SqlConnection(_connectionString);
+            var result = await connection.QueryAsync<TaxInvoicePoDto>(
+                "ERP_GetTaxInvoicePOsByItemCustomer",
+                new { ItemCode = itemCode, CustomerCode = customerCode, CompanyCode = companyCode, InvoiceCode = invoiceCode },
+                commandType: CommandType.StoredProcedure);
+            return result.ToList();
+        }
+
+        public async Task<CompanyStateDto?> GetCompanyStateAsync(int companyCode)
+        {
+            using var connection = new SqlConnection(_connectionString);
+            return await connection.QueryFirstOrDefaultAsync<CompanyStateDto>(
+                "ERP_GetCompanyState",
+                new { CompanyCode = companyCode },
+                commandType: CommandType.StoredProcedure);
+        }
+
+        public async Task<List<SalesTaxDto>> GetSalesTaxMasterAsync(int companyCode)
+        {
+            using var connection = new SqlConnection(_connectionString);
+            var result = await connection.QueryAsync<SalesTaxDto>(
+                "ERP_GetSalesTaxMaster",
+                new { CompanyCode = companyCode },
+                commandType: CommandType.StoredProcedure);
+            return result.ToList();
         }
     }
 }

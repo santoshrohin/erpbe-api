@@ -1,30 +1,24 @@
--- =============================================
--- Author:      AI Assistant
--- Create date: 2025-10-24
--- Description: Locks an invoice for editing (sets MODIFY = 1)
--- =============================================
-CREATE PROCEDURE [dbo].[ERP_LockInvoice]
-    @InvoiceCode INT
+CREATE OR ALTER PROCEDURE [dbo].[ERP_LockInvoice]
+    @InvoiceCode    BIGINT,
+    @LockedByUserId INT = 0,
+    @TimeoutMinutes INT = 30
 AS
 BEGIN
     SET NOCOUNT ON;
 
-    BEGIN TRY
-        UPDATE INVOICE_MASTER 
-        SET MODIFY = 1 
-        WHERE INM_CODE = @InvoiceCode;
+    UPDATE INVOICE_MASTER
+    SET    MODIFY      = 1,
+           MODIFY_TIME = GETDATE(),
+           MODIFY_BY   = @LockedByUserId
+    WHERE  INM_CODE   = @InvoiceCode
+      AND  ES_DELETE  = 0
+      AND  INM_TYPE  <> 'OutJWINM'   -- exclude LCI records
+      AND  (
+               MODIFY = 0
+               OR MODIFY_TIME IS NULL
+               OR MODIFY_TIME < DATEADD(MINUTE, -@TimeoutMinutes, GETDATE())
+           );
 
-        -- Return the number of rows affected
-        SELECT @@ROWCOUNT AS RowsAffected;
-
-    END TRY
-    BEGIN CATCH
-        DECLARE @ErrorMessage NVARCHAR(4000) = ERROR_MESSAGE();
-        DECLARE @ErrorSeverity INT = ERROR_SEVERITY();
-        DECLARE @ErrorState INT = ERROR_STATE();
-        
-        RAISERROR(@ErrorMessage, @ErrorSeverity, @ErrorState);
-    END CATCH
+    SELECT @@ROWCOUNT AS RowsAffected;
 END
 GO
-

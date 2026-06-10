@@ -1,8 +1,10 @@
+using ErpBE.API.Common;
 using ErpBE.API.Models;
 using ErpBE.Application.CustomerPo.Commands;
 using ErpBE.Application.CustomerPo.Queries;
 using ErpBE.Application.Interfaces;
 using ErpBE.Application.DTOs;
+using ErpBE.Domain.Common;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -37,6 +39,7 @@ public class CustomerPoController : ControllerBase
     /// <param name="parameters">Query parameters</param>
     /// <returns>Paged list of Customer POs</returns>
     [HttpGet]
+    [RequirePermission(ModuleCodes.Sales, PermissionBit.View)]
     public async Task<IActionResult> GetAllCustomerPos([FromQuery] CustomerPoQueryParameters parameters)
     {
         _logger.LogInformation("Fetching Customer POs - CompanyId: {CompanyId}, Page: {PageNumber}, PageSize: {PageSize}",
@@ -61,6 +64,7 @@ public class CustomerPoController : ControllerBase
     /// <param name="companyId">Company ID</param>
     /// <returns>Customer PO with details</returns>
     [HttpGet("{id}")]
+    [RequirePermission(ModuleCodes.Sales, PermissionBit.View)]
     public async Task<IActionResult> GetCustomerPoById(int id, [FromQuery] int companyId)
     {
         _logger.LogInformation("Fetching Customer PO by ID: {PoCode}, CompanyId: {CompanyId}", id, companyId);
@@ -83,6 +87,7 @@ public class CustomerPoController : ControllerBase
     /// <param name="command">Create command</param>
     /// <returns>Created Customer PO</returns>
     [HttpPost]
+    [RequirePermission(ModuleCodes.Sales, PermissionBit.Add)]
     public async Task<IActionResult> CreateCustomerPo([FromBody] CreateCustomerPoCommand command)
     {
         if (command == null)
@@ -117,13 +122,14 @@ public class CustomerPoController : ControllerBase
     /// <param name="command">Update command</param>
     /// <returns>Updated Customer PO</returns>
     [HttpPut("{id}")]
+    [RequirePermission(ModuleCodes.Sales, PermissionBit.Edit)]
     public async Task<IActionResult> UpdateCustomerPo(int id, [FromBody] UpdateCustomerPoCommand command)
     {
-        if (id != command.PoCode)
-        {
-            _logger.LogWarning("PO Code mismatch - URL: {UrlId}, Body: {BodyId}", id, command.PoCode);
-            return BadRequest(new { message = "PO Code in URL does not match the body." });
-        }
+        // URL path parameter is the authoritative source for the PO identity.
+        // Normalize the command so callers do not need to duplicate the id in
+        // the body. This eliminates the entire class of "id vs poCode mismatch"
+        // errors that arise from frontend field name differences (id vs poCode).
+        command.PoCode = id;
 
         _logger.LogInformation("Updating Customer PO - PoCode: {PoCode}, CompanyId: {CompanyId}",
             command.PoCode, command.CompanyId);
@@ -142,6 +148,7 @@ public class CustomerPoController : ControllerBase
     /// <param name="companyId">Company ID</param>
     /// <returns>Success status</returns>
     [HttpDelete("{id}")]
+    [RequirePermission(ModuleCodes.Sales, PermissionBit.Delete)]
     public async Task<IActionResult> DeleteCustomerPo(int id, [FromQuery] int companyId)
     {
         // Validate parameters directly (not through command validation)
@@ -178,6 +185,7 @@ public class CustomerPoController : ControllerBase
     /// <param name="companyCode">Company Code (from login response)</param>
     /// <returns>PDF file</returns>
     [HttpGet("{poCode}/print")]
+    [RequirePermission(ModuleCodes.Sales, PermissionBit.Print)]
     public async Task<IActionResult> PrintCustomerPo(
         int poCode,
         [FromQuery] int companyId,
@@ -224,6 +232,7 @@ public class CustomerPoController : ControllerBase
     /// <param name="request">Print request with PO codes and copy types</param>
     /// <returns>Merged PDF file</returns>
     [HttpPost("print-batch")]
+    [RequirePermission(ModuleCodes.Sales, PermissionBit.Print)]
     public async Task<IActionResult> PrintBatchCustomerPos([FromBody] BatchPrintPoRequest request)
     {
         _logger.LogInformation("POST /api/CustomerPo/print-batch - Printing {Count} POs", request.Pos.Count);
@@ -266,6 +275,56 @@ public class CustomerPoController : ControllerBase
             _logger.LogError(ex, "Error printing batch Customer POs");
             return StatusCode(500, new { message = "An error occurred while generating the batch PDF.", error = ex.Message });
         }
+    }
+
+    #endregion
+
+    /// <summary>
+    /// Amend an existing Customer PO — archives master+details and increments amendment counter.
+    /// Mirrors legacy CustomerPO.aspx.cs AMEND path.
+    /// </summary>
+    [HttpPost("{id}/amend")]
+    [RequirePermission(ModuleCodes.Sales, PermissionBit.Edit)]
+    public async Task<IActionResult> AmendCustomerPo(int id, [FromBody] AmendCustomerPoCommand command)
+    {
+        command.PoCode = id;
+
+        _logger.LogInformation("Amending Customer PO - PoCode: {PoCode}, CompanyId: {CompanyId}",
+            command.PoCode, command.CompanyId);
+
+        var result = await _mediator.Send(command);
+
+        _logger.LogInformation("Customer PO amended successfully - PoCode: {PoCode}", result.PoCode);
+
+        return Ok(result);
+    }
+
+    #region Lock / Unlock
+
+    /// <summary>
+    /// Lock a Customer PO to prevent concurrent edits
+    /// </summary>
+    [HttpPost("{id}/lock")]
+    [RequirePermission(ModuleCodes.Sales, PermissionBit.Edit)]
+    public async Task<IActionResult> LockCustomerPo(int id, [FromQuery] int companyId)
+    {
+        var userCode = int.TryParse(User.FindFirst("user_code")?.Value, out var uc) ? uc : 0;
+        var locked = await _mediator.Send(new LockCustomerPoCommand { PoCode = id, CompanyId = companyId, LockedByUserId = userCode });
+        if (!locked)
+            return Conflict(new { message = $"Customer PO {id} is already locked by another user." });
+
+        return Ok(new { message = $"Customer PO {id} locked." });
+    }
+
+    /// <summary>
+    /// Unlock a Customer PO
+    /// </summary>
+    [HttpDelete("{id}/lock")]
+    [RequirePermission(ModuleCodes.Sales, PermissionBit.Edit)]
+    public async Task<IActionResult> UnlockCustomerPo(int id, [FromQuery] int companyId)
+    {
+        await _mediator.Send(new UnlockCustomerPoCommand { PoCode = id, CompanyId = companyId });
+        return Ok(new { message = $"Customer PO {id} unlocked." });
     }
 
     #endregion

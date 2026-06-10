@@ -3,8 +3,8 @@
 -- Create date: 2025-10-24
 -- Description: Checks if an invoice is locked for editing
 -- =============================================
-CREATE PROCEDURE [dbo].[ERP_CheckInvoiceLock]
-    @InvoiceCode INT,
+CREATE or alter PROCEDURE [dbo].[ERP_CheckInvoiceLock]
+    @InvoiceCode BIGINT,
     @IsLocked BIT OUTPUT
 AS
 BEGIN

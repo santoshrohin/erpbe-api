@@ -12,13 +12,6 @@ public class LockCustomerPoCommandHandler : IRequestHandler<LockCustomerPoComman
         _repository = repository;
     }
 
-    public async Task<bool> Handle(LockCustomerPoCommand request, CancellationToken cancellationToken)
-    {
-        var isAlreadyLocked = await _repository.IsLockedAsync(request.PoCode);
-        if (isAlreadyLocked)
-            return false;
-
-        await _repository.LockAsync(request.PoCode);
-        return true;
-    }
+    public Task<bool> Handle(LockCustomerPoCommand request, CancellationToken cancellationToken)
+        => _repository.LockAsync(request.PoCode, request.LockedByUserId);
 }

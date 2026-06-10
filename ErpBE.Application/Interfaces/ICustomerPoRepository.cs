@@ -33,17 +33,13 @@ public interface ICustomerPoRepository
     Task<(IEnumerable<CustomerPoMasterDto> Data, int TotalCount)> GetAllAsync(CustomerPoQueryParameters parameters);
 
     /// <summary>
-    /// Checks if a PO is locked for editing
+    /// Atomically acquires the lock. Returns true if acquired, false if another user holds an
+    /// active lock. Expired locks (older than the SP's timeout) are overwritten.
     /// </summary>
-    Task<bool> IsLockedAsync(int poCode);
+    Task<bool> LockAsync(int poCode, int lockedByUserId);
 
     /// <summary>
-    /// Locks a PO for editing
-    /// </summary>
-    Task LockAsync(int poCode);
-
-    /// <summary>
-    /// Unlocks a PO after editing
+    /// Releases the lock and clears timestamp/user columns.
     /// </summary>
     Task UnlockAsync(int poCode);
 
@@ -51,5 +47,25 @@ public interface ICustomerPoRepository
     /// Gets Customer PO print data with all required information for PDF generation
     /// </summary>
     Task<CustomerPoPrintDto?> GetPrintDataAsync(int poCode, int companyId, int companyCode, PoCopyType copyType);
+
+    /// <summary>
+    /// Returns true if a PO with the given number already exists for the company (case-insensitive).
+    /// Pass excludePoCode to ignore the current record when checking on update.
+    /// </summary>
+    Task<bool> PoNumberExistsAsync(string poNumber, int companyId, int? excludePoCode = null);
+
+    /// <summary>
+    /// Returns true if the PO is referenced by a live Work Order (ES_DELETE=0).
+    /// Legacy ViewCustomerPO.aspx.cs blocks MODIFY when a WO references the PO.
+    /// </summary>
+    Task<bool> IsUsedInWorkOrderAsync(int poCode);
+
+    /// <summary>
+    /// Amends an existing Customer PO: archives master+details to CUSTPO_AM_MASTER/CUSTPO_AMD_DETAIL,
+    /// increments CPOM_AM_COUNT, updates master with new data, deletes old details,
+    /// then re-inserts the new detail lines. Mirrors legacy CustomerPO.aspx.cs AMEND path.
+    /// Returns the updated AmendmentCount.
+    /// </summary>
+    Task<int> AmendAsync(CustomerPoMasterDto po, IEnumerable<CustomerPoDetailDto> details);
 }
 

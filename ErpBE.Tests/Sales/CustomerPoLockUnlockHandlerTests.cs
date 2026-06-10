@@ -18,27 +18,26 @@ public class CustomerPoLockUnlockHandlerTests
     // ─── Lock ────────────────────────────────────────────────────────────────
 
     [Fact]
-    public async Task Lock_WhenAlreadyLocked_ReturnsFalseWithoutCallingLock()
+    public async Task Lock_WhenNotLocked_CallsLockAndReturnsTrue()
     {
-        _repository.IsLockedAsync(42).Returns(true);
+        _repository.LockAsync(42, 0).Returns(true);
         var handler = new LockCustomerPoCommandHandler(_repository);
 
-        var result = await handler.Handle(new LockCustomerPoCommand { PoCode = 42, CompanyId = 1 }, default);
+        var result = await handler.Handle(new LockCustomerPoCommand { PoCode = 42, CompanyId = 1, LockedByUserId = 0 }, default);
 
-        result.Should().BeFalse();
-        await _repository.DidNotReceive().LockAsync(Arg.Any<int>());
+        result.Should().BeTrue();
+        await _repository.Received(1).LockAsync(42, 0);
     }
 
     [Fact]
-    public async Task Lock_WhenNotLocked_CallsLockAndReturnsTrue()
+    public async Task Lock_WhenAlreadyLocked_ReturnsFalse()
     {
-        _repository.IsLockedAsync(42).Returns(false);
+        _repository.LockAsync(42, 0).Returns(false);
         var handler = new LockCustomerPoCommandHandler(_repository);
 
-        var result = await handler.Handle(new LockCustomerPoCommand { PoCode = 42, CompanyId = 1 }, default);
+        var result = await handler.Handle(new LockCustomerPoCommand { PoCode = 42, CompanyId = 1, LockedByUserId = 0 }, default);
 
-        result.Should().BeTrue();
-        await _repository.Received(1).LockAsync(42);
+        result.Should().BeFalse();
     }
 
     // ─── Unlock ──────────────────────────────────────────────────────────────

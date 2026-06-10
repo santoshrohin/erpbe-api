@@ -368,28 +368,17 @@ public class CustomerPoRepository : ICustomerPoRepository
         return (data, totalCount);
     }
 
-    public async Task<bool> IsLockedAsync(int poCode)
+    public async Task<bool> LockAsync(int poCode, int lockedByUserId)
     {
         using var connection = new SqlConnection(_connectionString);
         await connection.OpenAsync();
 
-        return await connection.ExecuteScalarAsync<bool>(
-            "ERP_CheckCustomerPoLock",
-            new { PoCode = poCode },
-            commandType: CommandType.StoredProcedure
-        );
-    }
-
-    public async Task LockAsync(int poCode)
-    {
-        using var connection = new SqlConnection(_connectionString);
-        await connection.OpenAsync();
-
-        await connection.ExecuteAsync(
+        var rows = await connection.ExecuteScalarAsync<int>(
             "ERP_LockCustomerPo",
-            new { PoCode = poCode },
+            new { PoCode = poCode, LockedByUserId = lockedByUserId },
             commandType: CommandType.StoredProcedure
         );
+        return rows > 0;
     }
 
     public async Task UnlockAsync(int poCode)

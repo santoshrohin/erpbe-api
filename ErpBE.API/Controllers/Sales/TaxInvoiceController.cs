@@ -1,11 +1,14 @@
+using ErpBE.API.Common;
 using ErpBE.Application.DTOs;
 using ErpBE.Application.DTOs.TaxInvoice;
 using ErpBE.Application.TaxInvoice.Commands;
 using ErpBE.Application.TaxInvoice.Queries;
 using ErpBE.Application.Interfaces;
+using ErpBE.Domain.Common;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+
 
 namespace ErpBE.API.Controllers.Sales
 {
@@ -29,6 +32,7 @@ namespace ErpBE.API.Controllers.Sales
         /// Get all Tax Invoices with filtering, searching, sorting, and pagination
         /// </summary>
         [HttpGet]
+        [RequirePermission(ModuleCodes.Sales, PermissionBit.View)]
         public async Task<ActionResult<TaxInvoicePagedResponse>> GetAllTaxInvoices([FromQuery] GetAllTaxInvoicesQuery query)
         {
             _logger.LogInformation("GET /api/TaxInvoice - Getting Tax Invoices for Company: {CompanyId}", query.CompanyId);
@@ -40,8 +44,9 @@ namespace ErpBE.API.Controllers.Sales
         /// <summary>
         /// Get Tax Invoice by ID
         /// </summary>
-        [HttpGet("{id}")]
-        public async Task<IActionResult> GetTaxInvoiceById(int id, [FromQuery] int companyId)
+        [HttpGet("{id:long}")]
+        [RequirePermission(ModuleCodes.Sales, PermissionBit.View)]
+        public async Task<IActionResult> GetTaxInvoiceById(long id, [FromQuery] int companyId)
         {
             _logger.LogInformation("GET /api/TaxInvoice/{Id} - Getting Tax Invoice: {InvoiceCode}, Company: {CompanyId}", id, id, companyId);
 
@@ -65,6 +70,7 @@ namespace ErpBE.API.Controllers.Sales
         /// Create a new Tax Invoice
         /// </summary>
         [HttpPost]
+        [RequirePermission(ModuleCodes.Sales, PermissionBit.Add)]
         public async Task<IActionResult> CreateTaxInvoice([FromBody] CreateTaxInvoiceRequest request)
         {
             _logger.LogInformation("POST /api/TaxInvoice - Creating Tax Invoice for Company: {CompanyCode}, Customer: {CustomerCode}", 
@@ -80,8 +86,9 @@ namespace ErpBE.API.Controllers.Sales
         /// <summary>
         /// Update an existing Tax Invoice
         /// </summary>
-        [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateTaxInvoice(int id, [FromBody] UpdateTaxInvoiceRequest request)
+        [HttpPut("{id:long}")]
+        [RequirePermission(ModuleCodes.Sales, PermissionBit.Edit)]
+        public async Task<IActionResult> UpdateTaxInvoice(long id, [FromBody] UpdateTaxInvoiceRequest request)
         {
             if (id != request.InvoiceCode)
             {
@@ -99,8 +106,9 @@ namespace ErpBE.API.Controllers.Sales
         /// <summary>
         /// Delete a Tax Invoice (soft delete)
         /// </summary>
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteTaxInvoice(int id, [FromQuery] int companyId)
+        [HttpDelete("{id:long}")]
+        [RequirePermission(ModuleCodes.Sales, PermissionBit.Delete)]
+        public async Task<IActionResult> DeleteTaxInvoice(long id, [FromQuery] int companyId)
         {
             _logger.LogInformation("DELETE /api/TaxInvoice/{Id} - Deleting Tax Invoice: {InvoiceCode}, Company: {CompanyId}", id, id, companyId);
 
@@ -120,6 +128,60 @@ namespace ErpBE.API.Controllers.Sales
             return NoContent();
         }
 
+        #region Lookup / Dropdown Endpoints
+
+        [HttpGet("customers")]
+        [RequirePermission(ModuleCodes.Sales, PermissionBit.View)]
+        public async Task<IActionResult> GetCustomers([FromQuery] int companyId)
+        {
+            var result = await _mediator.Send(new GetTaxInvoiceCustomersQuery { CompanyCode = companyId });
+            return Ok(result);
+        }
+
+        [HttpGet("items")]
+        [RequirePermission(ModuleCodes.Sales, PermissionBit.View)]
+        public async Task<IActionResult> GetItems([FromQuery] int customerCode, [FromQuery] int companyId)
+        {
+            var result = await _mediator.Send(new GetTaxInvoiceItemsByCustomerQuery { CustomerCode = customerCode, CompanyCode = companyId });
+            return Ok(result);
+        }
+
+        [HttpGet("item-details/{itemCode}")]
+        [RequirePermission(ModuleCodes.Sales, PermissionBit.View)]
+        public async Task<IActionResult> GetItemDetails(int itemCode, [FromQuery] int companyId)
+        {
+            var result = await _mediator.Send(new GetTaxInvoiceItemDetailsQuery { ItemCode = itemCode, CompanyCode = companyId });
+            if (result == null) return NotFound();
+            return Ok(result);
+        }
+
+        [HttpGet("pos")]
+        [RequirePermission(ModuleCodes.Sales, PermissionBit.View)]
+        public async Task<IActionResult> GetPOs([FromQuery] int itemCode, [FromQuery] int customerCode, [FromQuery] int companyId, [FromQuery] int? invoiceCode)
+        {
+            var result = await _mediator.Send(new GetTaxInvoicePOsQuery { ItemCode = itemCode, CustomerCode = customerCode, CompanyCode = companyId, InvoiceCode = invoiceCode });
+            return Ok(result);
+        }
+
+        [HttpGet("company-state")]
+        [RequirePermission(ModuleCodes.Sales, PermissionBit.View)]
+        public async Task<IActionResult> GetCompanyState([FromQuery] int companyId)
+        {
+            var result = await _mediator.Send(new GetCompanyStateQuery { CompanyCode = companyId });
+            if (result == null) return NotFound();
+            return Ok(result);
+        }
+
+        [HttpGet("sales-tax")]
+        [RequirePermission(ModuleCodes.Sales, PermissionBit.View)]
+        public async Task<IActionResult> GetSalesTax([FromQuery] int companyId)
+        {
+            var result = await _mediator.Send(new GetSalesTaxMasterQuery { CompanyCode = companyId });
+            return Ok(result);
+        }
+
+        #endregion
+
         #region Helper Methods
 
         private CreateTaxInvoiceCommand MapRequestToCommand(CreateTaxInvoiceRequest request)
@@ -136,6 +198,7 @@ namespace ErpBE.API.Controllers.Sales
                 DateFrom = request.DateFrom,
                 DateTo = request.DateTo,
                 IsSupplementary = request.IsSupplementary,
+                ParentInvoiceCode = request.ParentInvoiceCode,
                 Process = request.Process,
                 DiscountPercentage = request.DiscountPercentage,
                 PackingAmount = request.PackingAmount,
@@ -480,9 +543,10 @@ namespace ErpBE.API.Controllers.Sales
         /// <param name="companyId">Company ID</param>
         /// <param name="copyType">Copy Type (1=Original, 2=Duplicate, 3=Triplicate, 4=ExtraCopy)</param>
         /// <returns>PDF file</returns>
-        [HttpGet("{invoiceCode}/print")]
+        [HttpGet("{invoiceCode:long}/print")]
+        [RequirePermission(ModuleCodes.Sales, PermissionBit.Print)]
         public async Task<IActionResult> PrintTaxInvoice(
-            int invoiceCode,
+            long invoiceCode,
             [FromQuery] int companyId,
             [FromQuery] InvoiceCopyType copyType = InvoiceCopyType.Original)
         {
@@ -525,6 +589,7 @@ namespace ErpBE.API.Controllers.Sales
         /// <param name="request">Print request with invoice codes and copy types</param>
         /// <returns>Merged PDF file</returns>
         [HttpPost("print-batch")]
+        [RequirePermission(ModuleCodes.Sales, PermissionBit.Print)]
         public async Task<IActionResult> PrintBatchTaxInvoices([FromBody] BatchPrintRequest request)
         {
             _logger.LogInformation("POST /api/TaxInvoice/print-batch - Printing {Count} invoices", request.Invoices.Count);
@@ -569,6 +634,56 @@ namespace ErpBE.API.Controllers.Sales
         }
 
         #endregion
+
+        #region Lock / Unlock
+
+        [HttpPost("{id:long}/lock")]
+        [RequirePermission(ModuleCodes.Sales, PermissionBit.Edit)]
+        public async Task<IActionResult> LockTaxInvoice(long id, [FromQuery] int companyId)
+        {
+            _logger.LogInformation("POST /api/TaxInvoice/{Id}/lock - Locking invoice", id);
+            var userCode = int.TryParse(User.FindFirst("user_code")?.Value, out var uc) ? uc : 0;
+            var result = await _mediator.Send(new LockTaxInvoiceCommand { InvoiceCode = id, LockedByUserId = userCode });
+            if (!result)
+                return Conflict(new { message = $"Tax Invoice {id} is already locked by another user." });
+            return Ok(new { message = "Invoice locked successfully." });
+        }
+
+        [HttpPost("{id:long}/unlock")]
+        [RequirePermission(ModuleCodes.Sales, PermissionBit.Edit)]
+        public async Task<IActionResult> UnlockTaxInvoice(long id, [FromQuery] int companyId)
+        {
+            _logger.LogInformation("POST /api/TaxInvoice/{Id}/unlock - Unlocking invoice", id);
+            var result = await _mediator.Send(new UnlockTaxInvoiceCommand { InvoiceCode = id });
+            if (!result)
+                return NotFound(new { message = $"Tax Invoice {id} not found or could not be unlocked." });
+            return Ok(new { message = "Invoice unlocked successfully." });
+        }
+
+        #endregion
+
+        #region Approve
+
+        /// <summary>
+        /// Approve a Tax Invoice (requires BackDate permission — bit 6)
+        /// </summary>
+        [HttpPost("{id:long}/approve")]
+        [RequirePermission(ModuleCodes.Sales, PermissionBit.BackDate)]
+        public async Task<IActionResult> ApproveTaxInvoice(long id, [FromQuery] int companyCode)
+        {
+            var approved = await _mediator.Send(new ApproveTaxInvoiceCommand
+            {
+                InvoiceCode = id,
+                CompanyCode = companyCode
+            });
+
+            if (!approved)
+                return NotFound(new { message = $"Tax Invoice {id} not found or already deleted." });
+
+            return Ok(new { message = $"Tax Invoice {id} approved successfully." });
+        }
+
+        #endregion
     }
 }
 
@@ -586,7 +701,7 @@ public class BatchPrintRequest
 /// </summary>
 public class InvoicePrintRequest
 {
-    public int InvoiceCode { get; set; }
+    public long InvoiceCode { get; set; }
     public InvoiceCopyType CopyType { get; set; } = InvoiceCopyType.Original;
 }
 
