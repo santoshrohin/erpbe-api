@@ -5,10 +5,23 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    -- Abort if locked (MODIFY=1 means the record is locked)
+    -- Block if record is locked (MODIFY=1)
     IF EXISTS (SELECT 1 FROM DELIVERY_CHALLAN_MASTER WHERE DCM_CODE = @ChallanCode AND MODIFY = 1 AND ES_DELETE = 0)
     BEGIN
         RAISERROR('Delivery Challan is locked and cannot be deleted.', 16, 1);
+        RETURN;
+    END
+
+    -- Block if this DC is referenced by a DC Return (matches legacy: CheckUsedInTran DC_RETURN_MASTER / DNM_PARTY_DC_NO / DNM_TYPE='DCIN')
+    IF EXISTS (
+        SELECT 1
+        FROM DC_RETURN_MASTER
+        WHERE DNM_PARTY_DC_NO = @ChallanCode
+          AND DNM_TYPE        = 'DCIN'
+          AND ES_DELETE       = 0
+    )
+    BEGIN
+        RAISERROR('Record not deleted, it is used in Delivery Challan Return.', 16, 1);
         RETURN;
     END
 

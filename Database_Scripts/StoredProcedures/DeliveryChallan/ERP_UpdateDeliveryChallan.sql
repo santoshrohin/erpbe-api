@@ -16,6 +16,19 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
+    -- Block if this DC is referenced by a DC Return (matches legacy: CheckUsedInTran DC_RETURN_MASTER / DNM_PARTY_DC_NO / DNM_TYPE='DCIN')
+    IF EXISTS (
+        SELECT 1
+        FROM DC_RETURN_MASTER
+        WHERE DNM_PARTY_DC_NO = @ChallanCode
+          AND DNM_TYPE        = 'DCIN'
+          AND ES_DELETE       = 0
+    )
+    BEGIN
+        RAISERROR('Record not modified, it is used in Delivery Challan Return.', 16, 1);
+        RETURN;
+    END
+
     UPDATE DELIVERY_CHALLAN_MASTER
     SET    DCM_P_CODE        = @CustomerCode,
            DCM_TYPE          = @Type,
