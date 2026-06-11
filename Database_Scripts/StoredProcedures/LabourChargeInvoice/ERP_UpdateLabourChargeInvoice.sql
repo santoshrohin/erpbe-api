@@ -35,7 +35,13 @@ CREATE OR ALTER PROCEDURE [dbo].[ERP_UpdateLabourChargeInvoice]
     @TransportAmount FLOAT = NULL,
     @OctriAmount FLOAT = NULL,
     @CreditDays INT = NULL,
-    @HsnCode VARCHAR(50) = NULL
+    @HsnCode VARCHAR(50) = NULL,
+    @BasicExcisePercentage FLOAT = NULL,
+    @EducationCessPercentage FLOAT = NULL,
+    @HigherEducationCessPercentage FLOAT = NULL,
+    @AccessibleAmount FLOAT = NULL,
+    @IssueTime VARCHAR(20) = NULL,
+    @RemovalTime VARCHAR(20) = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -78,7 +84,11 @@ BEGIN
             INM_TRANS_AMT = @TransportAmount,
             INM_OCTRI_AMT = @OctriAmount,
             INM_C_DAYS = @CreditDays,
-            INM_HSN_CODE = @HsnCode
+            INM_HSN_CODE = @HsnCode,
+            INM_BEXCISE = @BasicExcisePercentage,
+            INM_EDUC_CESS = @EducationCessPercentage,
+            INM_H_EDUC_CESS = @HigherEducationCessPercentage,
+            INM_ACCESSIBLE_AMT = @AccessibleAmount
         WHERE INM_CODE = @InvoiceCode AND INM_CM_CODE = @CompanyCode AND INM_TYPE = 'OutJWINM';
 
     END TRY

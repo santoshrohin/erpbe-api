@@ -35,6 +35,13 @@ namespace ErpBE.Application.LabourChargeInvoice.Commands
         public double? OctriAmount { get; set; }
         public int? CreditDays { get; set; }
         public string? HsnCode { get; set; }
+        public double? CgstPercentage { get; set; }
+        public double? SgstPercentage { get; set; }
+        public double? IgstPercentage { get; set; }
+        public double? AccessibleAmount { get; set; }
+        public double? DiscountAmount { get; set; }
+        public string? IssueTime { get; set; }
+        public string? RemovalTime { get; set; }
         public List<CreateLabourChargeInvoiceDetailRequest> Details { get; set; } = new();
     }
 }

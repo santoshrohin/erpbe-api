@@ -28,10 +28,6 @@ namespace ErpBE.Application.LabourChargeInvoice.Handlers
                 "Updating Labour Charge Invoice: {InvoiceCode} for Company: {CompanyCode}",
                 request.InvoiceCode, request.CompanyCode);
 
-            var existing = await _repository.GetByIdAsync(request.InvoiceCode, request.CompanyCode);
-            if (existing?.IsModifyLocked == true)
-                throw new InvalidOperationException($"Labour Charge Invoice {request.InvoiceCode} is locked and cannot be modified.");
-
             var updateRequest = new UpdateLabourChargeInvoiceRequest
             {
                 InvoiceCode = request.InvoiceCode,
@@ -63,6 +59,13 @@ namespace ErpBE.Application.LabourChargeInvoice.Handlers
                 OctriAmount = request.OctriAmount,
                 CreditDays = request.CreditDays,
                 HsnCode = request.HsnCode,
+                CgstPercentage = request.CgstPercentage,
+                SgstPercentage = request.SgstPercentage,
+                IgstPercentage = request.IgstPercentage,
+                AccessibleAmount = request.AccessibleAmount,
+                DiscountAmount = request.DiscountAmount,
+                IssueTime = request.IssueTime,
+                RemovalTime = request.RemovalTime,
                 Details = request.Details
             };
 

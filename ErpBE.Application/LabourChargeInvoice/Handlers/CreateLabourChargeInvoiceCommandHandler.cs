@@ -59,6 +59,13 @@ namespace ErpBE.Application.LabourChargeInvoice.Handlers
                 OctriAmount = request.OctriAmount,
                 CreditDays = request.CreditDays,
                 HsnCode = request.HsnCode,
+                CgstPercentage = request.CgstPercentage,
+                SgstPercentage = request.SgstPercentage,
+                IgstPercentage = request.IgstPercentage,
+                AccessibleAmount = request.AccessibleAmount,
+                DiscountAmount = request.DiscountAmount,
+                IssueTime = request.IssueTime,
+                RemovalTime = request.RemovalTime,
                 Details = request.Details
             };
 

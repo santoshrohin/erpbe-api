@@ -9,7 +9,7 @@ public class UpdateLabourChargeInvoiceCommandValidator : AbstractValidator<Updat
     {
         RuleFor(x => x.InvoiceCode).NotEqual(0).WithMessage("Invoice code is required.");
         RuleFor(x => x.CompanyCode).GreaterThan(0).WithMessage("Company code is required.");
-        RuleFor(x => x.CustomerCode).GreaterThan(0).WithMessage("Customer is required.");
+        RuleFor(x => x.CustomerCode).NotEqual(0).WithMessage("Customer is required.");
         RuleFor(x => x.InvoiceDate).NotEmpty().WithMessage("Invoice date is required.");
         RuleFor(x => x.Details).NotEmpty().WithMessage("At least one detail line is required.");
 

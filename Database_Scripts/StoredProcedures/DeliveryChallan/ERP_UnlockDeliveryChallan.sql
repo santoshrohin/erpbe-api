@@ -11,5 +11,7 @@ BEGIN
            MODIFY_BY   = NULL
     WHERE  DCM_CODE    = @ChallanCode
       AND  DCM_CM_CODE = @CompanyCode;
+
+    SELECT @@ROWCOUNT AS RowsAffected;
 END
 GO

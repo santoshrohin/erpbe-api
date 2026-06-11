@@ -27,13 +27,13 @@ BEGIN
         DCM_VEH_NO        AS VehicleNumber,
         DCM_LR_NO         AS LrNumber,
         DCM_ORDER_NO      AS OrderNumber,
-        DCM_ORDER_DATE    AS OrderDate,
-        ES_DELETE         AS IsDeleted,
-        MODIFY            AS IsModifyLocked,
-        DCM_MAT_TYPE      AS MaterialType,
-        DCM_IS_RETURNABLE AS IsReturnable
+        DCM_ORDER_DATE                   AS OrderDate,
+        DELIVERY_CHALLAN_MASTER.ES_DELETE AS IsDeleted,
+        DELIVERY_CHALLAN_MASTER.MODIFY    AS IsModifyLocked,
+        DCM_MAT_TYPE                     AS MaterialType,
+        DCM_IS_RETURNABLE                AS IsReturnable
     FROM DELIVERY_CHALLAN_MASTER
-    JOIN PARTY_MASTER ON DCM_P_CODE = P_CODE
+    LEFT JOIN PARTY_MASTER ON DCM_P_CODE = P_CODE
     WHERE DELIVERY_CHALLAN_MASTER.ES_DELETE = 0
       AND DCM_CM_CODE   = @CompanyCode
       AND DCM_TYPE      = 'DLC'

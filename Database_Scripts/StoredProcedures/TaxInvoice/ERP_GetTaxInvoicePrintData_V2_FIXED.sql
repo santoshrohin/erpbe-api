@@ -103,7 +103,7 @@ BEGIN
     -- ============================================
     SELECT
         ROW_NUMBER() OVER (ORDER BY IND.IND_SR_NO, IND.IND_I_CODE) AS SrNo,
-        ISNULL(CAST(IM.I_CODE AS NVARCHAR(50)), '') + ' - ' + ISNULL(IM.I_NAME, '') AS DescriptionOfGoodsOrServices,
+        ISNULL(IM.I_CODENO, CAST(IM.I_CODE AS NVARCHAR(50))) + ' - ' + ISNULL(IM.I_NAME, '') AS DescriptionOfGoodsOrServices,
         ISNULL(IND.IND_HSN_CODE, '') AS HsnSac,
         ISNULL(UM.I_UOM_NAME, 'NOS') AS Uom,
         ISNULL(IND.IND_INQTY, 0) AS Qty,
@@ -139,8 +139,19 @@ BEGIN
         MAX(ISNULL(IND.E_H_EDU_Integrated, 0)) AS IntegratedTaxPercentage,
         SUM(ROUND(ISNULL(IND.IND_AMT, 0) * ISNULL(IND.E_H_EDU_Integrated, 0) / 100, 2)) AS IntegratedTaxAmount,
 
-        ISNULL(INM.INM_G_AMT, 0) AS GrandTotal,
-        '' AS AmountInWords  -- calculated in C#
+        -- Compute GrandTotal from live components so PDF matches arithmetic, not stale stored value
+        ISNULL(INM.INM_TAXABLE_AMT, 0)
+        - ISNULL(INM.INM_DISC_AMT, 0)
+        + ISNULL(INM.INM_PACK_AMT, 0)
+        + ISNULL(INM.INM_FREIGHT, 0)
+        + ISNULL(INM.INM_INSURANCE, 0)
+        + ISNULL(INM.INM_OTHER_AMT, 0)
+        + ISNULL(INM.INM_ROUNDING_AMT, 0)
+        + SUM(ROUND(ISNULL(IND.IND_AMT, 0) * ISNULL(IND.E_BASIC_CentralT, 0) / 100, 2))
+        + SUM(ROUND(ISNULL(IND.IND_AMT, 0) * ISNULL(IND.E_EDU_CESS_State, 0) / 100, 2))
+        + SUM(ROUND(ISNULL(IND.IND_AMT, 0) * ISNULL(IND.E_H_EDU_Integrated, 0) / 100, 2))
+        AS GrandTotal,
+        '' AS AmountInWords  -- calculated in C# from GrandTotal above
     FROM INVOICE_MASTER INM
     INNER JOIN INVOICE_DETAIL IND ON IND.IND_INM_CODE = INM.INM_CODE
     WHERE INM.INM_CODE = @InvoiceCode
@@ -153,7 +164,7 @@ BEGIN
         INM.INM_INSURANCE,
         INM.INM_OTHER_AMT,
         INM.INM_TAXABLE_AMT,
-        INM.INM_G_AMT;
+        INM.INM_ROUNDING_AMT;
 
     -- ============================================
     -- Result Set 7: E-Invoice Information

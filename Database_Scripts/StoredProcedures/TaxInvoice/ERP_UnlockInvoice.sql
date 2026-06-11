@@ -10,5 +10,7 @@ BEGIN
            MODIFY_BY   = NULL
     WHERE  INM_CODE  = @InvoiceCode
       AND  INM_TYPE <> 'OutJWINM';   -- exclude LCI records
+
+    SELECT @@ROWCOUNT AS RowsAffected;
 END
 GO

@@ -1,8 +1,10 @@
 using ErpBE.API.Common;
 using ErpBE.Application.DTOs.LabourChargeInvoice;
+using ErpBE.Application.DTOs.TaxInvoice;
 using ErpBE.Application.Interfaces;
 using ErpBE.Application.LabourChargeInvoice.Commands;
 using ErpBE.Application.LabourChargeInvoice.Queries;
+using ErpBE.Application.TaxInvoice.Queries;
 using ErpBE.Domain.Common;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -48,7 +50,7 @@ namespace ErpBE.API.Controllers.Sales
         /// <summary>
         /// Get Labour Charge Invoice by ID
         /// </summary>
-        [HttpGet("{id}")]
+        [HttpGet("{id:int}")]
         [RequirePermission(ModuleCodes.Sales, PermissionBit.View)]
         public async Task<IActionResult> GetById(int id, [FromQuery] int companyCode)
         {
@@ -170,9 +172,62 @@ namespace ErpBE.API.Controllers.Sales
         }
 
         /// <summary>
+        /// Get items available for a customer (same SP as TaxInvoice)
+        /// </summary>
+        [HttpGet("items")]
+        [RequirePermission(ModuleCodes.Sales, PermissionBit.View)]
+        public async Task<IActionResult> GetItems([FromQuery] int customerCode, [FromQuery] int companyCode)
+        {
+            var result = await _mediator.Send(new GetTaxInvoiceItemsByCustomerQuery
+            {
+                CustomerCode = customerCode,
+                CompanyCode = companyCode
+            });
+            return Ok(result);
+        }
+
+        /// <summary>
+        /// Get item details (UOM, stock from job-work store, HSN) for entry panel
+        /// </summary>
+        [HttpGet("item-details/{itemCode}")]
+        [RequirePermission(ModuleCodes.Sales, PermissionBit.View)]
+        public async Task<IActionResult> GetItemDetails(int itemCode, [FromQuery] int companyCode)
+        {
+            var result = await _mediator.Send(new GetTaxInvoiceItemDetailsQuery
+            {
+                ItemCode = itemCode,
+                CompanyCode = companyCode
+            });
+            if (result == null)
+                return NotFound(new { message = $"Item {itemCode} not found." });
+            return Ok(result);
+        }
+
+        /// <summary>
+        /// Get PO options for a given item + customer (rate, pending qty)
+        /// </summary>
+        [HttpGet("pos")]
+        [RequirePermission(ModuleCodes.Sales, PermissionBit.View)]
+        public async Task<IActionResult> GetPos(
+            [FromQuery] int itemCode,
+            [FromQuery] int customerCode,
+            [FromQuery] int companyCode,
+            [FromQuery] int? invoiceCode)
+        {
+            var result = await _mediator.Send(new GetTaxInvoicePOsQuery
+            {
+                ItemCode = itemCode,
+                CustomerCode = customerCode,
+                CompanyCode = companyCode,
+                InvoiceCode = invoiceCode
+            });
+            return Ok(result);
+        }
+
+        /// <summary>
         /// Print Labour Charge Invoice as PDF
         /// </summary>
-        [HttpGet("{id}/print")]
+        [HttpGet("{id:int}/print")]
         [RequirePermission(ModuleCodes.Sales, PermissionBit.Print)]
         public async Task<IActionResult> Print(int id, [FromQuery] int companyCode)
         {

@@ -7,26 +7,28 @@ BEGIN
 
     -- Master
     SELECT
-        DCM_CODE          AS ChallanCode,
-        DCM_CM_CODE       AS CompanyCode,
-        DCM_P_CODE        AS CustomerCode,
-        DCM_TYPE          AS Type,
-        DCM_NO            AS ChallanNumber,
-        DCM_DATE          AS ChallanDate,
-        DCM_INV_NO        AS InvoiceNumber,
-        DCM_THROUGH       AS Through,
-        DCM_VEH_NO        AS VehicleNumber,
-        DCM_LR_NO         AS LrNumber,
-        DCM_ORDER_NO      AS OrderNumber,
-        DCM_ORDER_DATE    AS OrderDate,
-        ES_DELETE         AS IsDeleted,
-        MODIFY            AS IsModifyLocked,
-        DCM_MAT_TYPE      AS MaterialType,
-        DCM_IS_RETURNABLE AS IsReturnable
+        DCM_CODE                         AS ChallanCode,
+        DCM_CM_CODE                      AS CompanyCode,
+        DCM_P_CODE                       AS CustomerCode,
+        P_NAME                           AS CustomerName,
+        DCM_TYPE                         AS Type,
+        DCM_NO                           AS ChallanNumber,
+        DCM_DATE                         AS ChallanDate,
+        DCM_INV_NO                       AS InvoiceNumber,
+        DCM_THROUGH                      AS Through,
+        DCM_VEH_NO                       AS VehicleNumber,
+        DCM_LR_NO                        AS LrNumber,
+        DCM_ORDER_NO                     AS OrderNumber,
+        DCM_ORDER_DATE                   AS OrderDate,
+        DELIVERY_CHALLAN_MASTER.ES_DELETE AS IsDeleted,
+        DELIVERY_CHALLAN_MASTER.MODIFY    AS IsModifyLocked,
+        DCM_MAT_TYPE                     AS MaterialType,
+        DCM_IS_RETURNABLE                AS IsReturnable
     FROM DELIVERY_CHALLAN_MASTER
+    LEFT JOIN PARTY_MASTER ON DCM_P_CODE = P_CODE
     WHERE DCM_CODE    = @ChallanCode
       AND DCM_CM_CODE = @CompanyCode
-      AND ES_DELETE   = 0;
+      AND DELIVERY_CHALLAN_MASTER.ES_DELETE = 0;
 
     -- Details
     SELECT

@@ -9,5 +9,7 @@ BEGIN
            MODIFY_TIME = NULL,
            MODIFY_BY   = NULL
     WHERE  CPOM_CODE = @PoCode;
+
+    SELECT @@ROWCOUNT AS RowsAffected;
 END
 GO

@@ -118,7 +118,15 @@ namespace ErpBE.API.Controllers.Sales
                 CompanyCode = companyId
             };
 
-            var result = await _mediator.Send(command);
+            bool result;
+            try
+            {
+                result = await _mediator.Send(command);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Conflict(new { message = ex.Message });
+            }
 
             if (!result)
             {
